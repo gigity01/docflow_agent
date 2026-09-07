@@ -17,6 +17,8 @@ from agents import (
     ToolExecutionConfig,
     handoff,
 )
+from agents.tool import FunctionTool
+from agents.tool_context import ToolContext
 from langgraph.graph import END, START, StateGraph
 from langgraph.runtime import Runtime
 from pydantic import BaseModel, Field
@@ -26,6 +28,7 @@ from app.agent_runtime.context import AgentToolContext
 from app.agents.collectors import (
     CollectorAgentSet,
     CollectorResult,
+    EvidenceItem,
     extract_collector_results,
 )
 from app.agents.gap_handler import (
@@ -38,6 +41,9 @@ from app.agents.gap_handler import (
     parse_gap_decision,
     validate_gap_decision,
 )
+from app.modules.context.agent_tools.catalog import CONTEXT_COLLECTOR_TOOLS
+from app.modules.document.agent_tools.catalog import DOCUMENT_COLLECTOR_TOOLS
+from app.modules.operations.agent_tools.catalog import OPERATIONS_COLLECTOR_TOOLS
 from app.modules.planning.agent_tools.catalog import PLANNER_TOOLS
 from app.modules.planning.application.dto import (
     MarkPlanNeedsClarificationInput,
@@ -49,6 +55,13 @@ from app.modules.planning.application.errors import PlanningRetryRequested
 DEFAULT_PLANNER_MAX_TURNS = 12
 PLANNER_EVIDENCE_MAX_FUNCTION_TOOL_CONCURRENCY = 3
 PLANNER_COMMIT_MAX_FUNCTION_TOOL_CONCURRENCY = 1
+# 单轮 Evidence 首次失败后允许的额外局部调用次数
+MAX_EVIDENCE_RETRY_COUNT = 2
+_COLLECTOR_QUERY_TOOLS = (
+    *DOCUMENT_COLLECTOR_TOOLS,
+    *CONTEXT_COLLECTOR_TOOLS,
+    *OPERATIONS_COLLECTOR_TOOLS,
+)
 
 
 class _PlannerWorkflowInput(TypedDict):
@@ -72,6 +85,8 @@ class _PlannerWorkflowState(TypedDict):
     gap_result: NotRequired[Any]
     gap_decision: NotRequired[GapDecision]
     final_result: NotRequired[Any]
+    local_retry_counts: NotRequired[dict[int, int]]
+    active_evidence_round: NotRequired[Literal[1, 2]]
 
 
 class ClarificationHandoffInput(BaseModel):
@@ -145,6 +160,10 @@ class PlannerAgentRunner:
         workflow.add_node("assess_final_gap", self._assess_final_gap)
         workflow.add_node("commit_plan", self._commit_plan)
         workflow.add_node("resolve_gap", self._resolve_gap)
+        workflow.add_node(
+            "retry_failed_evidence",
+            self._retry_failed_evidence,
+        )
 
         workflow.add_edge(START, "collect_initial_evidence")
         workflow.add_conditional_edges(
@@ -160,6 +179,7 @@ class PlannerAgentRunner:
             _route_initial_gap,
             {
                 "collect_more": "collect_follow_up_evidence",
+                "retry": "retry_failed_evidence",
                 "resolve": "resolve_gap",
             },
         )
@@ -167,7 +187,22 @@ class PlannerAgentRunner:
             "collect_follow_up_evidence",
             "assess_final_gap",
         )
-        workflow.add_edge("assess_final_gap", "resolve_gap")
+        workflow.add_conditional_edges(
+            "assess_final_gap",
+            _route_final_gap,
+            {
+                "retry": "retry_failed_evidence",
+                "resolve": "resolve_gap",
+            },
+        )
+        workflow.add_conditional_edges(
+            "retry_failed_evidence",
+            _route_retry_to_gap_handler,
+            {
+                "initial": "assess_initial_gap",
+                "final": "assess_final_gap",
+            },
+        )
         workflow.add_edge("commit_plan", END)
         workflow.add_edge("resolve_gap", END)
         return workflow.compile(name="planner_workflow")
@@ -197,6 +232,8 @@ class PlannerAgentRunner:
         return {
             "evidence_rounds": evidence_rounds,
             "evidence_history": first_evidence_result.to_input_list(),
+            "local_retry_counts": {1: 0, 2: 0},
+            "active_evidence_round": 1,
         }
 
     async def _assess_initial_gap(
@@ -250,6 +287,7 @@ class PlannerAgentRunner:
                 ),
             ],
             "evidence_history": second_evidence_result.to_input_list(),
+            "active_evidence_round": 2,
         }
 
     async def _assess_final_gap(
@@ -280,6 +318,62 @@ class PlannerAgentRunner:
                 evidence_history=state["evidence_history"],
                 context=runtime.context,
             )
+        }
+
+    async def _retry_failed_evidence(
+        self,
+        state: _PlannerWorkflowState,
+        runtime: Runtime[AgentToolContext],
+    ) -> dict[str, Any]:
+        """只重新执行当前 Evidence 轮次中仍可重试的失败 Query Tool。"""
+        active_round = state["active_evidence_round"]
+        current_round = _get_evidence_round(
+            state["evidence_rounds"],
+            active_round,
+        )
+        failed_items = _retryable_failed_items(current_round)
+        if not failed_items:
+            raise PlanningRetryRequested(state["gap_decision"].reason)
+
+        retry_counts = dict(state["local_retry_counts"])
+        retry_count = retry_counts[active_round] + 1
+        retry_counts[active_round] = retry_count
+        retry_attempts: list[dict[str, Any]] = []
+        replacements: dict[str, EvidenceItem] = {}
+
+        for failed_item in failed_items:
+            retried_item = await _invoke_evidence_retry(
+                failed_item=failed_item,
+                retry_count=retry_count,
+                context=runtime.context,
+            )
+            replacements[_evidence_query_key(failed_item)] = retried_item
+            retry_attempts.append(
+                {
+                    "tool_name": failed_item.tool_name,
+                    "arguments": failed_item.arguments,
+                    "failure_reason": failed_item.message,
+                    "current_retry_count": retry_count,
+                    "result": retried_item.model_dump(mode="json"),
+                }
+            )
+
+        merged_round = _replace_evidence_items(current_round, replacements)
+        return {
+            "evidence_rounds": [
+                merged_round if item.round_number == active_round else item
+                for item in state["evidence_rounds"]
+            ],
+            "evidence_history": _append_internal_message(
+                state["evidence_history"],
+                "Evidence Local Retry",
+                {
+                    "round_number": active_round,
+                    "retry_count": retry_count,
+                    "attempts": retry_attempts,
+                },
+            ),
+            "local_retry_counts": retry_counts,
         }
 
     async def _resolve_gap(
@@ -395,11 +489,189 @@ def _route_initial_evidence(
 
 def _route_initial_gap(
     state: _PlannerWorkflowState,
-) -> Literal["collect_more", "resolve"]:
+) -> Literal["collect_more", "retry", "resolve"]:
     """条件路由函数：判断首轮 Gap 评估后是否需要发起补查。"""
     if state["gap_decision"].action == GapAction.COLLECT_MORE:
         return "collect_more"
+    if _can_retry_active_evidence(state):
+        return "retry"
     return "resolve"
+
+
+def _route_final_gap(
+    state: _PlannerWorkflowState,
+) -> Literal["retry", "resolve"]:
+    """条件路由函数：判断终轮 Gap 评估后是否执行局部重试。"""
+    if _can_retry_active_evidence(state):
+        return "retry"
+    return "resolve"
+
+
+def _route_retry_to_gap_handler(
+    state: _PlannerWorkflowState,
+) -> Literal["initial", "final"]:
+    """局部重试后回到触发该重试的原 GapHandler 节点。"""
+    if state["active_evidence_round"] == 1:
+        return "initial"
+    return "final"
+
+
+def _can_retry_active_evidence(state: _PlannerWorkflowState) -> bool:
+    """判断 RETRY 决策是否仍有当前轮次的局部调用额度与失败项。"""
+    if state["gap_decision"].action != GapAction.RETRY:
+        return False
+    active_round = state["active_evidence_round"]
+    if state["local_retry_counts"][active_round] >= MAX_EVIDENCE_RETRY_COUNT:
+        return False
+    evidence_round = _get_evidence_round(
+        state["evidence_rounds"],
+        active_round,
+    )
+    return bool(_retryable_failed_items(evidence_round))
+
+
+def _get_evidence_round(
+    evidence_rounds: list[EvidenceRound],
+    round_number: Literal[1, 2],
+) -> EvidenceRound:
+    """按轮次取得唯一 EvidenceRound。"""
+    for evidence_round in evidence_rounds:
+        if evidence_round.round_number == round_number:
+            return evidence_round
+    raise RuntimeError(f"缺少 Evidence round {round_number}")
+
+
+def _evidence_query_key(item: EvidenceItem) -> str:
+    """生成 `tool_name + arguments` 的稳定逻辑查询标识。"""
+    canonical_arguments = json.dumps(
+        item.arguments,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    return f"{item.tool_name}:{canonical_arguments}"
+
+
+def _retryable_failed_items(
+    evidence_round: EvidenceRound,
+) -> list[EvidenceItem]:
+    """稳定去重取得当前轮次中可局部重试的失败查询。"""
+    failed_by_query: dict[str, EvidenceItem] = {}
+    for result in evidence_round.collector_results:
+        for item in result.evidence_items:
+            if item.outcome == "failed" and item.retryable:
+                failed_by_query.setdefault(_evidence_query_key(item), item)
+    return list(failed_by_query.values())
+
+
+def _resolve_evidence_tool(tool_name: str) -> FunctionTool:
+    """只从三个 Collector 的只读 Query Catalog 解析 Tool。"""
+    matches = [
+        tool for tool in _COLLECTOR_QUERY_TOOLS if tool.name == tool_name
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"Evidence retry Tool 必须在只读 Catalog 中唯一注册: {tool_name}"
+        )
+    return matches[0]
+
+
+async def _invoke_evidence_retry(
+    *,
+    failed_item: EvidenceItem,
+    retry_count: int,
+    context: AgentToolContext,
+) -> EvidenceItem:
+    """使用原始 arguments 直接重放一个失败的只读 Query Tool。"""
+    tool = _resolve_evidence_tool(failed_item.tool_name)
+    arguments_json = json.dumps(failed_item.arguments, ensure_ascii=False)
+    tool_call_id = (
+        f"{failed_item.original_tool_call_id}-local-retry-{retry_count}"
+    )
+    output = await tool.on_invoke_tool(
+        ToolContext(
+            context=context,
+            tool_name=tool.name,
+            tool_call_id=tool_call_id,
+            tool_arguments=arguments_json,
+        ),
+        arguments_json,
+    )
+    output_data = _normalize_retry_tool_output(output)
+    required_fields = {
+        "outcome",
+        "result_code",
+        "message",
+        "retryable",
+        "resource_refs",
+    }
+    missing_fields = required_fields - output_data.keys()
+    if missing_fields:
+        raise ValueError(
+            "Evidence retry Tool output 缺少公共字段: "
+            f"{sorted(missing_fields)}"
+        )
+    payload = {
+        key: value
+        for key, value in output_data.items()
+        if key not in required_fields
+    }
+    return EvidenceItem(
+        tool_name=failed_item.tool_name,
+        tool_call_id=tool_call_id,
+        original_tool_call_id=failed_item.original_tool_call_id,
+        attempt_count=failed_item.attempt_count + 1,
+        arguments=failed_item.arguments,
+        outcome=output_data["outcome"],
+        result_code=output_data["result_code"],
+        message=output_data["message"],
+        retryable=output_data["retryable"],
+        resource_refs=output_data["resource_refs"],
+        payload=payload,
+    )
+
+
+def _normalize_retry_tool_output(output: Any) -> dict[str, Any]:
+    """把直接调用 FunctionTool 的输出归一化为 JSON object。"""
+    if isinstance(output, BaseModel):
+        return output.model_dump(mode="json")
+    if isinstance(output, dict):
+        return output
+    if isinstance(output, str):
+        parsed = json.loads(output)
+        if isinstance(parsed, dict):
+            return parsed
+    raise TypeError("Evidence retry Tool output 必须是 JSON object")
+
+
+def _replace_evidence_items(
+    evidence_round: EvidenceRound,
+    replacements: dict[str, EvidenceItem],
+) -> EvidenceRound:
+    """按逻辑查询标识替换当前有效结果，并保留其他 Evidence。"""
+    collector_results: list[CollectorResult] = []
+    for result in evidence_round.collector_results:
+        evidence_items = [
+            replacements.get(_evidence_query_key(item), item)
+            for item in result.evidence_items
+        ]
+        collector_results.append(
+            result.model_copy(
+                update={
+                    "evidence_items": evidence_items,
+                    "resource_refs": list(
+                        dict.fromkeys(
+                            resource_ref
+                            for item in evidence_items
+                            for resource_ref in item.resource_refs
+                        )
+                    ),
+                }
+            )
+        )
+    return evidence_round.model_copy(
+        update={"collector_results": collector_results}
+    )
 
 
 def _evidence_is_ready_for_commit(results: list[CollectorResult]) -> bool:

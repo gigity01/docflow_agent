@@ -50,6 +50,7 @@ from app.agents.gap_handler import (
 )
 from app.agents.planner import (
     ClarificationAgentOutput,
+    _invoke_evidence_retry,
     build_planner_agent,
 )
 from app.modules.context.agent_tools.query_tools import (
@@ -99,21 +100,45 @@ class GapHandlerRunnerTest(unittest.IsolatedAsyncioTestCase):
     @staticmethod
     def _evidence_item(
         *,
+        tool_name="get_document_chunk_statistics",
+        tool_call_id="inner-call",
+        arguments=None,
         outcome="succeeded",
         retryable=False,
+        message="查询完成",
         payload=None,
     ) -> EvidenceItem:
         return EvidenceItem(
-            tool_name="get_document_chunk_statistics",
-            tool_call_id="inner-call",
-            arguments={"document_id": 7},
+            tool_name=tool_name,
+            tool_call_id=tool_call_id,
+            original_tool_call_id=tool_call_id,
+            attempt_count=1,
+            arguments=arguments
+            or {"tool_input": {"document_id": 7}},
             outcome=outcome,
             result_code="chunk_statistics_result",
-            message="查询完成",
+            message=message,
             retryable=retryable,
             resource_refs=["document:7"],
             payload=payload or {},
         )
+
+    @staticmethod
+    def _retry_tool_output(
+        *,
+        outcome="succeeded",
+        retryable=False,
+        message="重试查询完成",
+        payload=None,
+    ) -> dict:
+        return {
+            "outcome": outcome,
+            "result_code": "chunk_statistics_result",
+            "message": message,
+            "retryable": retryable,
+            "resource_refs": ["document:7"],
+            **(payload or {}),
+        }
 
     def _collector_result(
         self,
@@ -371,7 +396,9 @@ class GapHandlerRunnerTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Gap Decision", commit_history[-1]["content"])
         self.assertIn('"action": "COMMIT"', commit_history[-1]["content"])
 
-    async def test_retry_requires_retryable_failed_evidence(self) -> None:
+    async def test_initial_evidence_local_retry_succeeds_then_commits(
+        self,
+    ) -> None:
         evidence = self._evidence_run(
             self._collector_result(
                 gaps=["切块状态仍未知"],
@@ -390,19 +417,323 @@ class GapHandlerRunnerTest(unittest.IsolatedAsyncioTestCase):
                 reason="正确查询发生可重试故障",
             )
         )
+        resolved = self._gap_run(
+            GapDecision(
+                action=GapAction.COMMIT,
+                reason="局部重试已取得切块状态",
+            )
+        )
+        commit = _RunResult(final_output="committed")
+        retry_tool = SimpleNamespace(
+            name="get_document_chunk_statistics",
+            on_invoke_tool=mock.AsyncMock(
+                return_value=self._retry_tool_output(
+                    payload={"statistics": {"chunk_count": 3}}
+                )
+            ),
+        )
 
         with mock.patch(
             "app.agents.planner.Runner.run",
-            new=mock.AsyncMock(side_effect=[evidence, retry]),
+            new=mock.AsyncMock(
+                side_effect=[evidence, retry, resolved, commit]
+            ),
+        ) as run, mock.patch(
+            "app.agents.planner._resolve_evidence_tool",
+            return_value=retry_tool,
+        ):
+            result = await self.runner.run(
+                planner_input=self.planner_input,
+                context=mock.Mock(),
+            )
+
+        self.assertIs(result, commit)
+        retry_tool.on_invoke_tool.assert_awaited_once()
+        retried_gap_input = json.loads(run.await_args_list[2].args[1])
+        retried_item = retried_gap_input["evidence_rounds"][0][
+            "collector_results"
+        ][0]["evidence_items"][0]
+        self.assertEqual(retried_item["outcome"], "succeeded")
+        self.assertEqual(retried_item["attempt_count"], 2)
+        self.assertEqual(retried_item["original_tool_call_id"], "inner-call")
+        commit_history = run.await_args_list[3].args[1]
+        retry_history = next(
+            item
+            for item in commit_history
+            if item.get("role") == "user"
+            and "Evidence Local Retry" in item.get("content", "")
+        )
+        self.assertIn('"current_retry_count": 1', retry_history["content"])
+
+    async def test_local_retry_replays_original_arguments_through_catalog_tool(
+        self,
+    ) -> None:
+        get_statistics = mock.Mock()
+        get_statistics.execute.return_value = {
+            "document_id": 7,
+            "doc_code": "DOC-7",
+            "parent_count": 1,
+            "child_count": 3,
+            "parent_status_counts": {"active": 1},
+            "child_status_counts": {"active": 3},
+            "vector_status_counts": {"pending": 3},
+            "chunk_type_counts": {"text": 3},
+            "chunks_with_vector_id": 0,
+            "chunks_without_vector_id": 3,
+        }
+        audit_logger = mock.Mock()
+        context = SimpleNamespace(
+            permissions=frozenset({"document:read"}),
+            document_services=SimpleNamespace(
+                get_document_chunk_statistics=get_statistics
+            ),
+            audit_logger=audit_logger,
+        )
+        failed_item = self._evidence_item(
+            outcome="failed",
+            retryable=True,
+            message="统计查询超时",
+        )
+
+        retried_item = await _invoke_evidence_retry(
+            failed_item=failed_item,
+            retry_count=1,
+            context=context,
+        )
+
+        get_statistics.execute.assert_called_once_with(7)
+        self.assertEqual(retried_item.outcome, "succeeded")
+        self.assertEqual(retried_item.arguments, failed_item.arguments)
+        self.assertEqual(retried_item.original_tool_call_id, "inner-call")
+        self.assertEqual(retried_item.attempt_count, 2)
+        self.assertEqual(retried_item.payload["statistics"]["child_count"], 3)
+        audit_logger.start.assert_called_once()
+
+    async def test_follow_up_evidence_local_retry_returns_to_final_gap(
+        self,
+    ) -> None:
+        first = self._evidence_run(
+            self._collector_result(gaps=["第一轮没有查询切块状态"]),
+            history_label="evidence-1",
+        )
+        collect_more = self._gap_run(
+            GapDecision(
+                action=GapAction.COLLECT_MORE,
+                reason="需要定向补查切块状态",
+                follow_up="只确认文档 7 当前切块状态",
+            )
+        )
+        second = self._evidence_run(
+            self._collector_result(
+                gaps=["切块状态仍未知"],
+                evidence_items=[
+                    self._evidence_item(
+                        tool_call_id="second-round-call",
+                        outcome="failed",
+                        retryable=True,
+                    )
+                ],
+            ),
+            history_label="evidence-2",
+        )
+        retry = self._gap_run(
+            GapDecision(
+                action=GapAction.RETRY,
+                reason="第二轮查询发生可重试故障",
+            )
+        )
+        resolved = self._gap_run(
+            GapDecision(
+                action=GapAction.COMMIT,
+                reason="第二轮局部重试已解决缺口",
+            )
+        )
+        commit = _RunResult(final_output="committed")
+        retry_tool = SimpleNamespace(
+            name="get_document_chunk_statistics",
+            on_invoke_tool=mock.AsyncMock(
+                return_value=self._retry_tool_output(
+                    payload={"statistics": {"chunk_count": 3}}
+                )
+            ),
+        )
+        pending_results = [
+            first,
+            collect_more,
+            second,
+            retry,
+            resolved,
+            commit,
+        ]
+
+        async def run_agent(_agent, agent_input, **_kwargs):
+            result = pending_results.pop(0)
+            if result is second:
+                result._history = [*agent_input, *result._history]
+            return result
+
+        with mock.patch(
+            "app.agents.planner.Runner.run",
+            new=mock.AsyncMock(side_effect=run_agent),
+        ) as run, mock.patch(
+            "app.agents.planner._resolve_evidence_tool",
+            return_value=retry_tool,
+        ):
+            result = await self.runner.run(
+                planner_input=self.planner_input,
+                context=mock.Mock(),
+            )
+
+        self.assertIs(result, commit)
+        retry_tool.on_invoke_tool.assert_awaited_once()
+        self.assertFalse(json.loads(run.await_args_list[3].args[1])[
+            "collect_more_allowed"
+        ])
+        retried_gap_input = json.loads(run.await_args_list[4].args[1])
+        self.assertFalse(retried_gap_input["collect_more_allowed"])
+        retried_item = retried_gap_input["evidence_rounds"][1][
+            "collector_results"
+        ][0]["evidence_items"][0]
+        self.assertEqual(retried_item["outcome"], "succeeded")
+        self.assertEqual(retried_item["attempt_count"], 2)
+
+    async def test_local_retry_only_reexecutes_failed_evidence(self) -> None:
+        succeeded_item = self._evidence_item(
+            tool_name="get_document",
+            tool_call_id="successful-call",
+            arguments={"tool_input": {"document_id": 7}},
+            payload={"document": {"id": 7}},
+        )
+        failed_item = self._evidence_item(
+            tool_call_id="failed-call",
+            outcome="failed",
+            retryable=True,
+            message="统计查询超时",
+        )
+        evidence = self._evidence_run(
+            self._collector_result(
+                gaps=["切块状态仍未知"],
+                evidence_items=[succeeded_item, failed_item],
+            ),
+            history_label="evidence-1",
+        )
+        retry = self._gap_run(
+            GapDecision(
+                action=GapAction.RETRY,
+                reason="统计查询可重试",
+            )
+        )
+        resolved = self._gap_run(
+            GapDecision(
+                action=GapAction.COMMIT,
+                reason="失败查询重试成功",
+            )
+        )
+        commit = _RunResult(final_output="committed")
+        retry_tool = SimpleNamespace(
+            name="get_document_chunk_statistics",
+            on_invoke_tool=mock.AsyncMock(
+                return_value=self._retry_tool_output(
+                    payload={"statistics": {"chunk_count": 3}}
+                )
+            ),
+        )
+
+        with mock.patch(
+            "app.agents.planner.Runner.run",
+            new=mock.AsyncMock(
+                side_effect=[evidence, retry, resolved, commit]
+            ),
+        ) as run, mock.patch(
+            "app.agents.planner._resolve_evidence_tool",
+            return_value=retry_tool,
+        ) as resolve_tool:
+            await self.runner.run(
+                planner_input=self.planner_input,
+                context=mock.Mock(),
+            )
+
+        resolve_tool.assert_called_once_with("get_document_chunk_statistics")
+        retry_tool.on_invoke_tool.assert_awaited_once()
+        retried_items = json.loads(run.await_args_list[2].args[1])[
+            "evidence_rounds"
+        ][0]["collector_results"][0]["evidence_items"]
+        by_name = {item["tool_name"]: item for item in retried_items}
+        self.assertEqual(
+            by_name["get_document"]["tool_call_id"],
+            "successful-call",
+        )
+        self.assertEqual(
+            by_name["get_document_chunk_statistics"]["attempt_count"],
+            2,
+        )
+
+    async def test_two_local_retries_exhaust_then_request_outer_replan(
+        self,
+    ) -> None:
+        evidence = self._evidence_run(
+            self._collector_result(
+                gaps=["切块状态仍未知"],
+                evidence_items=[
+                    self._evidence_item(
+                        outcome="failed",
+                        retryable=True,
+                    )
+                ],
+            ),
+            history_label="evidence-1",
+        )
+        retry_decisions = [
+            self._gap_run(
+                GapDecision(
+                    action=GapAction.RETRY,
+                    reason=f"第 {index} 次判断仍需重试",
+                )
+            )
+            for index in range(1, 4)
+        ]
+        retry_tool = SimpleNamespace(
+            name="get_document_chunk_statistics",
+            on_invoke_tool=mock.AsyncMock(
+                side_effect=[
+                    self._retry_tool_output(
+                        outcome="failed",
+                        retryable=True,
+                        message="第一次局部重试仍超时",
+                    ),
+                    self._retry_tool_output(
+                        outcome="failed",
+                        retryable=True,
+                        message="第二次局部重试仍超时",
+                    ),
+                ]
+            ),
+        )
+
+        with mock.patch(
+            "app.agents.planner.Runner.run",
+            new=mock.AsyncMock(side_effect=[evidence, *retry_decisions]),
+        ) as run, mock.patch(
+            "app.agents.planner._resolve_evidence_tool",
+            return_value=retry_tool,
         ):
             with self.assertRaisesRegex(
                 PlanningRetryRequested,
-                "可重试故障",
+                "第 3 次判断仍需重试",
             ):
                 await self.runner.run(
                     planner_input=self.planner_input,
                     context=mock.Mock(),
                 )
+
+        self.assertEqual(retry_tool.on_invoke_tool.await_count, 2)
+        self.assertEqual(run.await_count, 4)
+        exhausted_gap_input = json.loads(run.await_args_list[3].args[1])
+        exhausted_item = exhausted_gap_input["evidence_rounds"][0][
+            "collector_results"
+        ][0]["evidence_items"][0]
+        self.assertEqual(exhausted_item["attempt_count"], 3)
+        self.assertTrue(exhausted_item["retryable"])
 
     async def test_non_retryable_failure_cannot_be_labeled_retry(self) -> None:
         evidence = self._evidence_run(
@@ -469,7 +800,9 @@ class GapHandlerRunnerTest(unittest.IsolatedAsyncioTestCase):
         with mock.patch(
             "app.agents.planner.Runner.run",
             new=mock.AsyncMock(side_effect=[evidence, system_failure]),
-        ):
+        ), mock.patch(
+            "app.agents.planner._resolve_evidence_tool"
+        ) as resolve_tool:
             with self.assertRaisesRegex(
                 RuntimeError,
                 "Planning 前置取证发生系统故障",
@@ -478,6 +811,7 @@ class GapHandlerRunnerTest(unittest.IsolatedAsyncioTestCase):
                     planner_input=self.planner_input,
                     context=mock.Mock(),
                 )
+        resolve_tool.assert_not_called()
 
     async def test_system_failure_requires_non_retryable_failed_evidence(
         self,
