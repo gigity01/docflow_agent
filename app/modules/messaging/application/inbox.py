@@ -26,7 +26,7 @@ def record_inbox_once(
         event_id: 待消费的事件唯一标识。
 
     Returns:
-        bool: True 表示首次消费登记成功，可继续执行业务；False 表示事件已处理过，应跳过幂等执行。
+        True 表示首次消费登记成功，可继续执行业务；False 表示事件已处理过，应跳过幂等执行。
     """
     # 1. 检查当前消费者是否已记录该事件
     if uow.inbox.exists(consumer_name, event_id):

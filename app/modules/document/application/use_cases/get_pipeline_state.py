@@ -29,7 +29,7 @@ class GetDocumentPipelineStateUseCase:
             document_id: 目标文档 ID。
 
         Returns:
-            DocumentPipelineStateResult: 文档流水线综合状态结果 DTO。
+            文档流水线综合状态结果 DTO。
 
         Raises:
             DocumentApplicationError: 文档不存在时抛出 404。

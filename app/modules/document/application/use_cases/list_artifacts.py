@@ -31,7 +31,7 @@ class ListDocumentArtifactsUseCase:
             document_id: 目标文档 ID。
 
         Returns:
-            ListDocumentArtifactsResult: 包含源信息及产物实体列表的结果 DTO。
+            包含源信息及产物实体列表的结果 DTO。
 
         Raises:
             DocumentApplicationError: 文档不存在时抛出 404。

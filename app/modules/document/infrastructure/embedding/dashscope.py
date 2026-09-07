@@ -40,7 +40,7 @@ class EmbeddingService:
             texts: 待向量化的文本字符串列表（如 child_chunk 的 embedding_text）。
 
         Returns:
-            list[list[float]]: 与输入文本顺序一一对应的浮点数向量列表。
+            与输入文本顺序一一对应的浮点数向量列表。
         """
         if not texts:
             return []

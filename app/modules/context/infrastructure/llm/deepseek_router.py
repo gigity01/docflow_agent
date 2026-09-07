@@ -57,7 +57,7 @@ def _empty_selection_without_model() -> ContextSelectionDecision:
     """当会话没有任何历史未归档链时，直接返回空读取集合，避免无意义的 LLM 网络调用。
 
     Returns:
-        ContextSelectionDecision: relevant_chain_ids 为空的决策对象。
+        relevant_chain_ids 为空的决策对象。
     """
     return ContextSelectionDecision(
         relevant_chain_ids=[],
@@ -109,7 +109,7 @@ class DeepSeekContextRouter:
             agent_input: ContextAgentInput 包含当前用户输入与候选未归档链。
 
         Returns:
-            ContextSelectionDecision: 结构化路由选择决策。
+            结构化路由选择决策。
 
         Raises:
             ContextAgentOutputError: 多次尝试后依然未能获得合法 strict tool 调用结果。

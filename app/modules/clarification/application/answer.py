@@ -57,7 +57,7 @@ class AnswerClarificationUseCase:
             answer: 用户对澄清问题的回答内容。
 
         Returns:
-            str: 关联的 Plan ID。
+            关联的 Plan ID。
 
         Raises:
             ClarificationApplicationError:

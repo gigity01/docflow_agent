@@ -33,7 +33,7 @@ class ChildChunkRepository:
             child_chunk: 待插入的子块实体。
 
         Returns:
-            ChildChunk: 包含自增主键的子块实体。
+            包含自增主键的子块实体。
         """
         self.db.add(child_chunk)
         self.db.flush()
@@ -46,7 +46,7 @@ class ChildChunkRepository:
             child_chunks: 子块实体列表。
 
         Returns:
-            list[ChildChunk]: 插入后的子块实体列表。
+            插入后的子块实体列表。
         """
         if not child_chunks:
             return []
@@ -74,7 +74,7 @@ class ChildChunkRepository:
             doc_id: 文档 ID。
 
         Returns:
-            bool: 存在返回 True，否则返回 False。
+            存在返回 True，否则返回 False。
         """
         return (
             self.db.query(ChildChunk.id)
@@ -98,7 +98,7 @@ class ChildChunkRepository:
             vector_status: 向量状态（如 'pending', 'indexing', 'failed'）。
 
         Returns:
-            bool: 存在返回 True，否则返回 False。
+            存在返回 True，否则返回 False。
         """
         return (
             self.db.query(ChildChunk.id)
@@ -118,7 +118,7 @@ class ChildChunkRepository:
             doc_id: 文档 ID。
 
         Returns:
-            int: 待索引/失败的子块数量。
+            待索引/失败的子块数量。
         """
         return (
             self.db.query(ChildChunk.id)
@@ -140,7 +140,7 @@ class ChildChunkRepository:
             doc_id: 文档 ID。
 
         Returns:
-            dict[str, int]: 状态 -> 数量的字典映射。
+            状态 -> 数量的字典映射。
         """
         rows = (
             self.db.query(
@@ -163,7 +163,7 @@ class ChildChunkRepository:
             filters: 查询过滤条件 DTO。
 
         Returns:
-            list[ChildChunk]: 子块实体列表。
+            子块实体列表。
         """
         return (
             self._search_query(filters)
@@ -185,7 +185,7 @@ class ChildChunkRepository:
             filters: 查询过滤条件 DTO。
 
         Returns:
-            int: 总记录数。
+            总记录数。
         """
         return self._search_query(filters).count()
 
@@ -346,7 +346,7 @@ class ChildChunkRepository:
             statuses: 待领取的向量状态集合。
 
         Returns:
-            list[ChildChunk]: 待处理子块列表。
+            待处理子块列表。
         """
         if not statuses:
             return []
@@ -379,7 +379,7 @@ class ChildChunkRepository:
             chunk_ids: 待锁定的子块 ID 集合。
 
         Returns:
-            list[ChildChunk]: 锁定后的子块列表。
+            锁定后的子块列表。
         """
         ordered_ids = sorted(set(chunk_ids))
         if not ordered_ids:

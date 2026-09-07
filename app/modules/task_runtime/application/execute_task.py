@@ -10,11 +10,6 @@ class ExecuteTaskUseCase:
     """任务执行主用例类。"""
 
     def __init__(self, runtime) -> None:
-        """初始化 ExecuteTaskUseCase。
-
-        Args:
-            runtime: TaskRuntimeService 实例。
-        """
         self._runtime = runtime
 
     async def execute(self, plan_id: str) -> ExecutePlanResult:
@@ -24,6 +19,6 @@ class ExecuteTaskUseCase:
             plan_id: 目标 Plan ID。
 
         Returns:
-            ExecutePlanResult: 本次步进的执行结果。
+            本次步进的执行结果。
         """
         return await self._runtime.execute_next(plan_id)

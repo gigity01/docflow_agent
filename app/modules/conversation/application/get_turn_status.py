@@ -27,7 +27,7 @@ class GetTurnStatusUseCase:
             turn_id: 轮次唯一标识。
 
         Returns:
-            TurnStatusResult: 包含当前 Turn 状态、最新 Plan ID/状态/版本号、Task 列表以及最终助手文本。
+            包含当前 Turn 状态、最新 Plan ID/状态/版本号、Task 列表以及最终助手文本。
 
         Raises:
             ValueError: 当指定的 Turn 不存在或不属于当前会话时抛出。

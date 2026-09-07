@@ -36,7 +36,7 @@ class TaskExecutorPort(Protocol):
             context: 运行时上下文信息。
 
         Returns:
-            TaskExecutorResult: 包含执行产出 output_json 与资源引用的结果。
+            包含执行产出 output_json 与资源引用的结果。
         """
         ...
 
@@ -117,7 +117,7 @@ class CapabilityRegistry:
             capability_code: 目标能力编码。
 
         Returns:
-            CapabilityDefinition: 能力元数据。
+            能力元数据。
 
         Raises:
             ValueError: 当能力未注册时。
@@ -146,7 +146,7 @@ class ExecutorRegistry:
             executor_code: Executor 编码标识。
 
         Returns:
-            TaskExecutorPort: 执行器实例。
+            执行器实例。
 
         Raises:
             ValueError: 当 Executor 未注册时。
@@ -178,7 +178,7 @@ class CompensatorRegistry:
             compensator_code: 补偿器编码标识。
 
         Returns:
-            OperationCompensatorPort: 补偿器实例。
+            补偿器实例。
 
         Raises:
             ValueError: 当 Compensator 未注册时。

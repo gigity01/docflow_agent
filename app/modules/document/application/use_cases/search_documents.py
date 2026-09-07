@@ -31,7 +31,7 @@ class SearchDocumentsUseCase:
             query: 包含知识库 ID、状态轴、时间范围、关键字、排序与分页等参数的 DTO。
 
         Returns:
-            SearchDocumentsResult: 包含文档摘要列表与总命中数的分页结果 DTO。
+            包含文档摘要列表与总命中数的分页结果 DTO。
         """
         with self._uow_factory() as uow:
             documents = uow.documents.search(query)

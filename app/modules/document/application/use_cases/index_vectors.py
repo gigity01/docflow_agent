@@ -254,7 +254,7 @@ class IndexVectorsUseCase:
             vector_store: 可选显式指定的 VectorStore 客户端替身。
 
         Returns:
-            IndexVectorsResult: 索引执行统计 DTO。
+            索引执行统计 DTO。
 
         Raises:
             DocumentApplicationError: 状态不合法（409）、未找到（404）或索引异常（500）。
@@ -396,7 +396,7 @@ def _claim_indexing(
         ports: 端口容器。
 
     Returns:
-        IndexingContext: 领取成功后的上下文快照。
+        领取成功后的上下文快照。
     """
     with ports.uow_factory() as uow:
         document = uow.documents.get_by_id_for_update(document_id)
@@ -505,7 +505,7 @@ def _execute_indexing(
         settings: 索引参数设置。
 
     Returns:
-        IndexingExecutionResult: 写入成功的执行结果。
+        写入成功的执行结果。
 
     Raises:
         IndexingExecutionError: 外部服务调用或校验失败时抛出。
@@ -649,7 +649,7 @@ def _complete_indexing(
         ports: 端口容器。
 
     Returns:
-        IndexVectorsResult: 索引结果统计。
+        索引结果统计。
     """
     context = result.context
     chunk_ids = _context_chunk_ids(context)
@@ -742,7 +742,7 @@ class IndexVectorsCompensator:
             index_logger: 可选日志记录器。
 
         Returns:
-            IndexFailureStateResult: 状态变更快照。
+            状态变更快照。
         """
         snapshot = self._prepare(
             document_id=document_id,

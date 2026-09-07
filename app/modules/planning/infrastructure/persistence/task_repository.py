@@ -32,7 +32,7 @@ class TaskRepository:
             task: Task 实体对象。
 
         Returns:
-            Task: 刷新后的 Task 实体。
+            刷新后的 Task 实体。
         """
         self.db.add(task)
         self.db.flush()
@@ -46,7 +46,7 @@ class TaskRepository:
             plan_id: 规划 ID。
 
         Returns:
-            list[Task]: 任务列表。
+            任务列表。
         """
         return (
             self.db.query(Task)
@@ -67,7 +67,7 @@ class TaskRepository:
             status: 目标状态字符串（TaskStatus）。
 
         Returns:
-            list[Task]: 锁定的任务列表。
+            锁定的任务列表。
         """
         return (
             self.db.query(Task)
@@ -87,7 +87,7 @@ class TaskRepository:
             task_id: 任务全局唯一标识。
 
         Returns:
-            Task | None: 锁定的 Task 实体或 None。
+            锁定的 Task 实体或 None。
         """
         return (
             self.db.query(Task)
@@ -115,7 +115,7 @@ class TaskRepository:
             succeeded_status: 执行成功状态标识（TaskStatus.SUCCEEDED）。
 
         Returns:
-            Task | None: 下一个就绪可执行的 Task 实体，或 None。
+            下一个就绪可执行的 Task 实体，或 None。
         """
         candidates = (
             self.db.query(Task)
@@ -155,7 +155,7 @@ class TaskRepository:
             status: 任务状态。
 
         Returns:
-            int: 匹配的任务数量。
+            匹配的任务数量。
         """
         return (
             self.db.query(Task)

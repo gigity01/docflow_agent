@@ -25,7 +25,7 @@ class KnowledgeBaseRepository:
             kb_id: 知识库主键 ID。
 
         Returns:
-            KnowledgeBase | None: 找到返回实体，否则返回 None。
+            找到返回实体，否则返回 None。
         """
         return (
             self.db.query(KnowledgeBase)

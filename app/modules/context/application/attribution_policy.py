@@ -21,7 +21,7 @@ def build_read_set_fallback_attribution(
         new_chain_id: 当需要创建新链时预分配的链 ID（可选）。
 
     Returns:
-        TurnAttribution: 包含目标已有链 ID 列表或新链创建标记的归因对象。
+        包含目标已有链 ID 列表或新链创建标记的归因对象。
 
     Raises:
         ValueError: 当已有链存在但同时传入了 new_chain_id 时抛出。

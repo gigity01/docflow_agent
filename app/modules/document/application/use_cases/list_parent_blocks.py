@@ -32,7 +32,7 @@ class ListParentBlocksUseCase:
             query: 父块查询过滤条件 DTO。
 
         Returns:
-            ListParentBlocksResult: 包含父块列表与分页元数据的 DTO。
+            包含父块列表与分页元数据的 DTO。
         """
         with self._uow_factory() as uow:
             blocks = uow.parent_blocks.search(query)

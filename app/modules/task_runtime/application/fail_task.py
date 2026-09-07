@@ -14,11 +14,6 @@ class FailTaskUseCase:
     """任务失败处理用例类。"""
 
     def __init__(self, runtime) -> None:
-        """初始化 FailTaskUseCase。
-
-        Args:
-            runtime: TaskRuntimeService 实例。
-        """
         self._runtime = runtime
 
     async def execute(
@@ -33,6 +28,6 @@ class FailTaskUseCase:
             error: 捕获的 TaskExecutionError 异常。
 
         Returns:
-            ExecutePlanResult: 失败处理与补偿/重试调度结果。
+            失败处理与补偿/重试调度结果。
         """
         return await self._runtime.fail_task(snapshot, error)

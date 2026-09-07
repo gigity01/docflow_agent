@@ -51,7 +51,7 @@ def split_resource_key(resource_key: str) -> tuple[str, str]:
         resource_key: 资源唯一标识字符串。
 
     Returns:
-        tuple[str, str]: (resource_type, resource_id) 二元组。
+        (resource_type, resource_id) 二元组。
 
     Raises:
         ValueError: 资源 Key 格式非法时抛出。
@@ -105,7 +105,7 @@ class ContextResourceService:
         """构建空的资源队列实例。
 
         Returns:
-            ContextResourceQueue: 空队列实例。
+            空队列实例。
         """
         return ContextResourceQueue(capacity=self.queue_capacity)
 
@@ -128,7 +128,7 @@ class ContextResourceService:
             now: 当前操作时间戳。
 
         Returns:
-            ContextResourceQueueRefresh | None: 若有资源变更则返回待刷新至 Redis 的载荷，否则返回 None。
+            若有资源变更则返回待刷新至 Redis 的载荷，否则返回 None。
         """
         if update is None:
             return None
@@ -241,7 +241,7 @@ class ContextResourceService:
             resource_version: 数据库当前最新的资源版本号。
 
         Returns:
-            ContextResourceQueue: 校验或预热完成的热资源队列。
+            校验或预热完成的热资源队列。
         """
         # 1. 尝试从 Redis 读取版本匹配的热队列
         try:
@@ -342,7 +342,7 @@ class ContextResourceService:
             resource_version: 资源版本号。
 
         Returns:
-            list[ContextResourceRef]: 按最久未使用到最近使用排列的资源引用列表。
+            按最久未使用到最近使用排列的资源引用列表。
 
         Raises:
             RuntimeError: 链不存在、会话归属不一致或版本已变化。

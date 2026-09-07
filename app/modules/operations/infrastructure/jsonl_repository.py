@@ -85,7 +85,7 @@ class JsonlLogRepository:
             ascending: 是否按时间升序（True 为升序，False 默认为降序/最新优先）。
 
         Returns:
-            JsonlScanPage: 分页事件字典列表与下一页游标。
+            分页事件字典列表与下一页游标。
 
         Raises:
             OperationsQueryError: 当 limit < 1 或 cursor 解码校验失败时抛出。
@@ -152,7 +152,7 @@ class JsonlLogRepository:
             created_to: 截止时间。
 
         Returns:
-            list[_IndexedEvent]: 读取并匹配的索引事件列表。
+            读取并匹配的索引事件列表。
 
         Raises:
             OperationsQueryError: 当目录访问出现 OSError 时抛出。
@@ -204,7 +204,7 @@ class JsonlLogRepository:
             created_to: 截止时间。
 
         Returns:
-            list[_IndexedEvent]: 文件内匹配的索引事件列表。
+            文件内匹配的索引事件列表。
 
         Raises:
             OperationsQueryError: 当文件打开读取失败时抛出。
@@ -258,7 +258,7 @@ class JsonlLogRepository:
             line: 文本行内容。
 
         Returns:
-            _IndexedEvent | None: 解析成功返回包装实体；非法 JSON 或非字典返回 None。
+            解析成功返回包装实体；非法 JSON 或非字典返回 None。
         """
         try:
             event = json.loads(line)
@@ -326,7 +326,7 @@ class JsonlLogRepository:
             ascending: 排序方向。
 
         Returns:
-            str: Base64 编码的游标字符串。
+            Base64 编码的游标字符串。
         """
         payload = json.dumps(
             {
@@ -354,7 +354,7 @@ class JsonlLogRepository:
             ascending: 期望的排序方向。
 
         Returns:
-            tuple[str, str, str, str, int] | None: 5 元组排序键；若 cursor 为 None 则返回 None。
+            5 元组排序键；若 cursor 为 None 则返回 None。
 
         Raises:
             OperationsQueryError: 当游标格式损坏、版本不匹配或签名不一致时抛出 400 异常。

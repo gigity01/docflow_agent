@@ -21,7 +21,7 @@ def get_chunker(source_type: str) -> BaseChunker:
         source_type: 原始或中间文件格式（如 'txt', 'md', 'markdown', 'csv'）。
 
     Returns:
-        BaseChunker: 对应的切块器实例。
+        对应的切块器实例。
 
     Raises:
         HTTPException: 当传入不支持的文件格式时抛出 400 错误。

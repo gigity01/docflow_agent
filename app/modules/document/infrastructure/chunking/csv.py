@@ -32,7 +32,7 @@ def build_csv_child_content(record: dict[str, str]) -> str:
         record: 单行字段名与字段值的映射字典。
 
     Returns:
-        str: 紧凑 JSON 字符串。
+        紧凑 JSON 字符串。
     """
     return json.dumps(
         record,
@@ -48,7 +48,7 @@ def build_csv_embedding_text(record: dict[str, str]) -> str:
         record: 字段名与值的映射字典。
 
     Returns:
-        str: 由 '列名：值' 换行拼接构成的待向量化正文。
+        由 '列名：值' 换行拼接构成的待向量化正文。
     """
     return "\n".join(
         f"{field}：{value}"
@@ -70,7 +70,7 @@ class CsvChunker(BaseChunker):
             input_data: 切块输入对象，包含 cleaned_path 与元数据。
 
         Returns:
-            ChunkBuildResult: 构建完成的父块与子块结果。
+            构建完成的父块与子块结果。
 
         Raises:
             ValueError: 表头缺失、表头不匹配或单行数据超限时抛出。

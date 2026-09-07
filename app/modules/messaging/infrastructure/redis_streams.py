@@ -126,7 +126,7 @@ class RedisStreamWorker:
             block_milliseconds: 读取新消息时的最大阻塞毫秒数。
 
         Returns:
-            int: 本轮成功分派并 ACK 的消息条数。
+            本轮成功分派并 ACK 的消息条数。
         """
         await self.ensure_group()
 
@@ -154,7 +154,7 @@ class RedisStreamWorker:
             count: 本次认领的最大消息数量。
 
         Returns:
-            int: 成功处理的消息数量。
+            成功处理的消息数量。
         """
         claimed = await self._redis.xautoclaim(
             self._stream_name,
@@ -182,7 +182,7 @@ class RedisStreamWorker:
             block_milliseconds: 阻塞毫秒数（为 None 时不阻塞）。
 
         Returns:
-            int: 成功处理的消息数量。
+            成功处理的消息数量。
         """
         streams = await self._redis.xreadgroup(
             self._group_name,
@@ -205,7 +205,7 @@ class RedisStreamWorker:
             messages: Redis Stream 返回的消息元组列表 [(message_id, fields), ...]。
 
         Returns:
-            int: 成功处理并确认的消息数量。
+            成功处理并确认的消息数量。
         """
         handled = 0
         for message_id, fields in messages:

@@ -23,11 +23,6 @@ class GetConversationTurnUseCase:
     """读取指定 Conversation Turn 记录详情的只读用例。"""
 
     def __init__(self, query_service: ContextQueryService) -> None:
-        """初始化 GetConversationTurnUseCase。
-
-        Args:
-            query_service: ContextQueryService 实例。
-        """
         self._query_service = query_service
 
     def execute(self, turn_id: str) -> ConversationTurnQueryResult:
@@ -37,7 +32,7 @@ class GetConversationTurnUseCase:
             turn_id: Turn 唯一标识。
 
         Returns:
-            ConversationTurnQueryResult: Turn 查询结果。
+            Turn 查询结果。
         """
         return self._query_service.get_conversation_turn(turn_id)
 
@@ -46,11 +41,6 @@ class ListConversationTurnsUseCase:
     """分页查询并筛选 Conversation Turn 列表的只读用例。"""
 
     def __init__(self, query_service: ContextQueryService) -> None:
-        """初始化 ListConversationTurnsUseCase。
-
-        Args:
-            query_service: ContextQueryService 实例。
-        """
         self._query_service = query_service
 
     def execute(
@@ -63,7 +53,7 @@ class ListConversationTurnsUseCase:
             query: 查询筛选与分页参数。
 
         Returns:
-            ConversationTurnListResult: 分页查询结果。
+            分页查询结果。
         """
         return self._query_service.list_conversation_turns(query)
 
@@ -72,11 +62,6 @@ class GetContextChainUseCase:
     """读取指定 Context Chain 及其最新状态的只读用例。"""
 
     def __init__(self, query_service: ContextQueryService) -> None:
-        """初始化 GetContextChainUseCase。
-
-        Args:
-            query_service: ContextQueryService 实例。
-        """
         self._query_service = query_service
 
     def execute(self, chain_id: str) -> ContextChainQueryResult:
@@ -86,7 +71,7 @@ class GetContextChainUseCase:
             chain_id: Context Chain 唯一标识。
 
         Returns:
-            ContextChainQueryResult: 上下文链查询结果。
+            上下文链查询结果。
         """
         return self._query_service.get_context_chain(chain_id)
 
@@ -95,11 +80,6 @@ class ListContextChainsUseCase:
     """分页查询 Context Chain 列表的只读用例。"""
 
     def __init__(self, query_service: ContextQueryService) -> None:
-        """初始化 ListContextChainsUseCase。
-
-        Args:
-            query_service: ContextQueryService 实例。
-        """
         self._query_service = query_service
 
     def execute(
@@ -112,7 +92,7 @@ class ListContextChainsUseCase:
             query: 查询筛选与分页参数。
 
         Returns:
-            ContextChainListResult: 分页查询结果。
+            分页查询结果。
         """
         return self._query_service.list_context_chains(query)
 
@@ -121,11 +101,6 @@ class ListContextChainNodesUseCase:
     """分页查询 Context Chain Node 列表的只读用例。"""
 
     def __init__(self, query_service: ContextQueryService) -> None:
-        """初始化 ListContextChainNodesUseCase。
-
-        Args:
-            query_service: ContextQueryService 实例。
-        """
         self._query_service = query_service
 
     def execute(
@@ -138,7 +113,7 @@ class ListContextChainNodesUseCase:
             query: 查询筛选与分页参数。
 
         Returns:
-            ContextChainNodeListResult: 分页查询结果。
+            分页查询结果。
         """
         return self._query_service.list_context_chain_nodes(query)
 
@@ -147,11 +122,6 @@ class ListContextChainResourcesUseCase:
     """分页查询 Context Chain Resource 列表的只读用例。"""
 
     def __init__(self, query_service: ContextQueryService) -> None:
-        """初始化 ListContextChainResourcesUseCase。
-
-        Args:
-            query_service: ContextQueryService 实例。
-        """
         self._query_service = query_service
 
     def execute(
@@ -164,7 +134,7 @@ class ListContextChainResourcesUseCase:
             query: 查询筛选与分页参数。
 
         Returns:
-            ContextChainResourceListResult: 分页查询结果。
+            分页查询结果。
         """
         return self._query_service.list_context_chain_resources(query)
 
@@ -173,11 +143,6 @@ class ListContextSelectionRecordsUseCase:
     """分页查询 Context SelectionRecord 决策记录列表的只读用例。"""
 
     def __init__(self, query_service: ContextQueryService) -> None:
-        """初始化 ListContextSelectionRecordsUseCase。
-
-        Args:
-            query_service: ContextQueryService 实例。
-        """
         self._query_service = query_service
 
     def execute(
@@ -190,6 +155,6 @@ class ListContextSelectionRecordsUseCase:
             query: 查询筛选与分页参数。
 
         Returns:
-            ContextSelectionRecordListResult: 分页查询结果。
+            分页查询结果。
         """
         return self._query_service.list_context_selection_records(query)

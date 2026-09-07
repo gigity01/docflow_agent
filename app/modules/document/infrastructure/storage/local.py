@@ -39,7 +39,7 @@ def get_safe_extension(filename: str) -> str:
         filename: 文件名字符串。
 
     Returns:
-        str: 不含前导点号的小写扩展名（如 'pdf', 'docx', 'txt', 'csv'）。
+        不含前导点号的小写扩展名（如 'pdf', 'docx', 'txt', 'csv'）。
 
     Raises:
         HTTPException: 文件名无扩展名或扩展名不在允许白名单中抛出 400。
@@ -83,7 +83,7 @@ def calculate_file_hash(file_path: Path) -> str:
         file_path: 本地文件绝对路径。
 
     Returns:
-        str: 64 位小写 SHA-256 哈希十六进制字符串。
+        64 位小写 SHA-256 哈希十六进制字符串。
     """
     sha256 = hashlib.sha256()
 
@@ -101,7 +101,7 @@ def cleanup_file(path: Path) -> bool:
         path: 待删除的文件路径。
 
     Returns:
-        bool: 删除成功返回 True，不存在返回 False。
+        删除成功返回 True，不存在返回 False。
     """
     try:
         path.unlink(missing_ok=True)

@@ -10,11 +10,6 @@ class CompleteTaskUseCase:
     """任务成功完成用例类。"""
 
     def __init__(self, runtime) -> None:
-        """初始化 CompleteTaskUseCase。
-
-        Args:
-            runtime: TaskRuntimeService 实例。
-        """
         self._runtime = runtime
 
     def execute(

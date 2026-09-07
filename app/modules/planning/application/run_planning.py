@@ -1,11 +1,7 @@
-"""一次 Planner Run 的 Application 闭环入口。
+"""连接用户输入、上下文快照、Planner 执行与计划状态持久化。
 
-本模块实现了规划系统主驱动用例 RunPlanningUseCase：
-1. 准备并组装包含原始用户输入、澄清补充输入以及关联上下文链（含 Redis 热资源队列）的规划输入。
-2. 创建或校验 Plan 记录（初始状态为 planning）。
-3. 装配受限的只读 Collector 工具上下文（Document, Context, Operations）与 Planning Tools。
-4. 调用 LangGraph StateGraph 编排的 PlannerRunner（Evidence 取证 → Gap 缺口分析 → Commit 决策）。
-5. 根据 Planner 执行结果，更新 Plan 状态（READY / NEEDS_CLARIFICATION / UNSUPPORTED / RETRY_PENDING）并原子落盘。
+应用层准备规划输入和受限工具上下文，调用 PlannerRunner 后读取业务状态，
+并处理澄清、重试与失败。任务创建和计划发布由 Planning 用例负责。
 """
 
 from __future__ import annotations
@@ -88,7 +84,7 @@ def _compose_current_user_input(
         clarification_input: 用户对澄清问题的回答内容（若有）。
 
     Returns:
-        str: 拼接后的完整输入文本。
+        拼接后的完整输入文本。
     """
     if clarification_input is None:
         return user_input
@@ -99,15 +95,7 @@ def _compose_current_user_input(
 
 
 class RunPlanningUseCase:
-    """Planner 规划执行用例。
-
-    主流程：
-    1. 加载当前 Turn 的用户原始输入、澄清补充输入以及上下文关联链上的热资源队列。
-    2. 创建 Plan 记录（初始状态为 planning）。
-    3. 装配只读 Collector 工具上下文与 Planning Tools。
-    4. 调用 LangGraph 编排的 PlannerRunner（Evidence 取证 → Gap 缺口分析 → Commit 决策）。
-    5. 根据 Planner 执行结果，更新 Plan 状态（ready / needs_clarification / unsupported / retry_pending）并原子持久化。
-    """
+    """执行一轮规划，并将模型执行结果收敛为持久化的计划状态。"""
 
     def __init__(
         self,
@@ -154,7 +142,7 @@ class RunPlanningUseCase:
             command: 规划输入参数。
 
         Returns:
-            RunPlanningResult: 规划结果。
+            规划结果。
         """
         # 加载规划所需的上下文与用户输入
         planner_input = await self._load_plannable_input(
@@ -190,7 +178,7 @@ class RunPlanningUseCase:
             plan_id: 已存在的 Plan ID。
 
         Returns:
-            RunPlanningResult: 规划结果。
+            规划结果。
         """
         planner_input = await self._load_plannable_input(
             command,

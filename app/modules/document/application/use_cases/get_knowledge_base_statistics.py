@@ -33,7 +33,7 @@ class GetKnowledgeBaseStatisticsUseCase:
             kb_id: 知识库主键 ID。
 
         Returns:
-            KnowledgeBaseStatisticsResult: 知识库统计结果 DTO。
+            知识库统计结果 DTO。
 
         Raises:
             DocumentApplicationError: 知识库不存在时抛出 404。

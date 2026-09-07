@@ -30,7 +30,7 @@ class ParentBlockRepository:
             parent_block: 待插入的父块实体。
 
         Returns:
-            ParentBlock: 包含自增主键的实体。
+            包含自增主键的实体。
         """
         self.db.add(parent_block)
         self.db.flush()
@@ -46,7 +46,7 @@ class ParentBlockRepository:
             parent_blocks: 待插入的父块实体列表。
 
         Returns:
-            list[ParentBlock]: 包含主键的实体列表。
+            包含主键的实体列表。
         """
         if not parent_blocks:
             return []
@@ -74,7 +74,7 @@ class ParentBlockRepository:
             doc_id: 文档 ID。
 
         Returns:
-            int: 活跃父块数。
+            活跃父块数。
         """
         return (
             self.db.query(ParentBlock.id)
@@ -92,7 +92,7 @@ class ParentBlockRepository:
             filters: 查询过滤条件 DTO。
 
         Returns:
-            list[ParentBlock]: 父块实体列表。
+            父块实体列表。
         """
         return (
             self._search_query(filters)
@@ -113,7 +113,7 @@ class ParentBlockRepository:
             filters: 查询过滤条件 DTO。
 
         Returns:
-            int: 匹配总记录数。
+            匹配总记录数。
         """
         return self._search_query(filters).count()
 
@@ -159,7 +159,7 @@ class ParentBlockRepository:
             doc_id: 文档 ID。
 
         Returns:
-            dict[str, int]: 状态 -> 数量的字典映射。
+            状态 -> 数量的字典映射。
         """
         rows = (
             self.db.query(ParentBlock.status, func.count(ParentBlock.id))
@@ -176,7 +176,7 @@ class ParentBlockRepository:
             kb_id: 知识库 ID。
 
         Returns:
-            int: 活跃父块总数。
+            活跃父块总数。
         """
         return (
             self.db.query(ParentBlock.id)
@@ -200,7 +200,7 @@ class ParentBlockRepository:
             semantic_group_index: 语义组序号。
 
         Returns:
-            list[ParentBlock]: 语义组内的父块列表。
+            语义组内的父块列表。
         """
         return (
             self.db.query(ParentBlock)

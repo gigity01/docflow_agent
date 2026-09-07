@@ -39,7 +39,7 @@ class MdProcessor(BaseProcessor):
             cleaned_path: 清洗后输出的标准 Markdown 路径。
 
         Returns:
-            ProcessResult: 处理结果对象（包含章节标题元数据 sections、heading_count 等）。
+            处理结果对象（包含章节标题元数据 sections、heading_count 等）。
         """
         source_path = self.validate_source_path(source_path)
         cleaned_path = self.prepare_cleaned_path(cleaned_path)

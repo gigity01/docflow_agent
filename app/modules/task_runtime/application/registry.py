@@ -1,9 +1,7 @@
-"""当前三个确定性文档 Capability 的可信 Registry 装配工厂。
+"""注册文档处理、切块和向量索引能力及其执行策略。
 
-注册以下三种内置文档处理领域能力：
-1. `process_document`: 文档格式转换与文本清洗（超时 300s，最大重试 3 次）。
-2. `build_document_chunks`: 文档父子语义块构建（超时 300s，最大重试 3 次）。
-3. `index_document_vectors`: Qwen Embedding 向量生成与 Qdrant 索引写入（超时 900s，最大重试 3 次）。
+每项能力绑定输入输出模型、执行器和补偿器。超时与最大尝试次数
+以下方配置为准；max_attempts 包含首次执行，并非额外重试次数。
 """
 
 from app.modules.planning.domain.enums import PlanningCapabilityCode
@@ -22,11 +20,7 @@ from app.modules.task_runtime.application.schemas import (
 
 
 def build_capability_registry() -> CapabilityRegistry:
-    """构建并初始化包含系统全部内置 Capability 的注册表实例。
-
-    Returns:
-        CapabilityRegistry: 初始化完成的 CapabilityRegistry 对象。
-    """
+    """构建当前支持的文档能力注册表。"""
     return CapabilityRegistry(
         [
             CapabilityDefinition(

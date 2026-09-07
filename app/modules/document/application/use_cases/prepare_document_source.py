@@ -98,7 +98,7 @@ def prepare_process_source(
         output_dir: 二级产物写入的目标 operation 目录。
 
     Returns:
-        PreparedProcessSource: 包含准备好的输入文件路径及待登记产物。
+        包含准备好的输入文件路径及待登记产物。
     """
     source_type = normalize_source_type(document.source_type)
 

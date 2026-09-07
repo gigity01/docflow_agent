@@ -37,7 +37,7 @@ class QueryDocumentLogEventsUseCase:
             query: 查询条件。
 
         Returns:
-            DocumentBusinessLogPage: 匹配的事件分页结果集。
+            匹配的事件分页结果集。
         """
         return self._query_service.query_document_business_logs(query)
 
@@ -63,7 +63,7 @@ class GetDocumentOperationTimelineUseCase:
             query: 包含 operation_id 的查询条件。
 
         Returns:
-            DocumentOperationTimelineResult: 单次操作的完整聚合事件流。
+            单次操作的完整聚合事件流。
         """
         return self._query_service.get_document_operation_timeline(query)
 
@@ -89,6 +89,6 @@ class GetDocumentWorkflowTimelineUseCase:
             query: 包含 workflow_id 的查询条件。
 
         Returns:
-            DocumentWorkflowTimelineResult: 工作流的完整聚合事件流。
+            工作流的完整聚合事件流。
         """
         return self._query_service.get_document_workflow_timeline(query)
