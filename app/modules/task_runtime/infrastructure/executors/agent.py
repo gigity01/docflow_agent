@@ -57,7 +57,7 @@ def adapt_process_document_output(
         output: 工具执行返回的 ToolResult 结构。
 
     Returns:
-        TaskExecutorResult: 适配后的任务执行结果与资源引用。
+        适配后的任务执行结果与资源引用。
     """
     result = ProcessDocumentToolOutput.model_validate(output)
     task_output = ProcessDocumentTaskOutput(
@@ -80,7 +80,7 @@ def adapt_build_document_chunks_output(
         output: 工具执行返回的 ToolResult 结构。
 
     Returns:
-        TaskExecutorResult: 适配后的任务执行结果与资源引用。
+        适配后的任务执行结果与资源引用。
     """
     result = BuildDocumentChunksToolOutput.model_validate(output)
     task_output = BuildDocumentChunksTaskOutput(
@@ -104,7 +104,7 @@ def adapt_index_document_vectors_output(
         output: 工具执行返回的 ToolResult 结构。
 
     Returns:
-        TaskExecutorResult: 适配后的任务执行结果与资源引用。
+        适配后的任务执行结果与资源引用。
     """
     result = IndexDocumentVectorsToolOutput.model_validate(output)
     task_output = IndexDocumentVectorsTaskOutput(
@@ -190,7 +190,7 @@ class AgentTaskExecutor:
             context: 运行时上下文。
 
         Returns:
-            TaskExecutorResult: 执行结果。
+            执行结果。
 
         Raises:
             TaskExecutionError: 当输入无效、Agent 失败、工具拒绝、执行失败或输出契约不合法时。

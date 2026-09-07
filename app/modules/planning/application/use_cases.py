@@ -129,7 +129,7 @@ class CreatePlanUseCase:
             command: 包含 turn_id、revision、workflow_id 等参数的输入模型。
 
         Returns:
-            PlanResult: 创建完成的 Plan 视图对象。
+            创建完成的 Plan 视图对象。
 
         Raises:
             PlanningApplicationError: Turn 不存在或该 revision 已存在时。
@@ -200,7 +200,7 @@ class _CreateDocumentTaskUseCase:
             command: 任务创建命令对象。
 
         Returns:
-            TaskResult: 创建完成的 Task 实体对象。
+            创建完成的 Task 实体对象。
 
         Raises:
             PlanningApplicationError: 任务数超限、序号重复、标识冲突或依赖非法时。
@@ -350,7 +350,7 @@ class FinalizePlanUseCase:
             command: 包含 plan_id 与 turn_id 的输入。
 
         Returns:
-            FinalizePlanResult: 发布结果。
+            发布结果。
 
         Raises:
             PlanningApplicationError: 当 Plan 状态冲突、任务序号不连续或 DAG 校验失败时。
@@ -653,7 +653,7 @@ class MarkPlanNeedsClarificationUseCase:
             command: 澄清请求输入。
 
         Returns:
-            PlanResult: 更新后的 Plan 实体。
+            更新后的 Plan 实体。
 
         Raises:
             PlanningApplicationError: 会话归属冲突、状态冲突或已存在 open 澄清时。
@@ -741,7 +741,7 @@ class SetClarificationQuestionUseCase:
             command: 提问文本输入。
 
         Returns:
-            str: 成功持久化的提问文本。
+            成功持久化的提问文本。
         """
         with self._ports.uow_factory() as uow:
             plan = uow.plans.get_by_id_for_update(command.plan_id)
@@ -802,7 +802,7 @@ def build_planning_use_cases(
         ports: PlanningApplicationPorts 实例。
 
     Returns:
-        PlanningUseCases: 装配完成的用例集合对象。
+        装配完成的用例集合对象。
     """
     return PlanningUseCases(
         create_plan=CreatePlanUseCase(ports=ports),

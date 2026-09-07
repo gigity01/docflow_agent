@@ -96,7 +96,7 @@ def _as_text(value: str | bytes | int) -> str:
         value: Redis 原始返回值。
 
     Returns:
-        str: 转换后的字符串。
+        转换后的字符串。
     """
     if isinstance(value, bytes):
         return value.decode("utf-8")
@@ -160,7 +160,7 @@ class ContextResourceQueueRepository:
             expected_version: 期望匹配的数据库资源版本号。
 
         Returns:
-            ContextResourceQueue | None: 命中的热资源队列模型；若版本不匹配、数据缺损或超出容量则返回 None。
+            命中的热资源队列模型；若版本不匹配、数据缺损或超出容量则返回 None。
         """
         queue_key, data_key, version_key = self._keys(
             conversation_id,
@@ -229,7 +229,7 @@ class ContextResourceQueueRepository:
             database_version: 数据库更新后的新版本号。
 
         Returns:
-            bool: 增量应用成功返回 True，CAS 失败或缓存不存在返回 False。
+            增量应用成功返回 True，CAS 失败或缓存不存在返回 False。
         """
         keys = self._keys(conversation_id, chain_id)
         arguments: list[str | int] = [

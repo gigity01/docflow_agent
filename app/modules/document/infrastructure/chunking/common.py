@@ -32,7 +32,7 @@ def normalize_text(text: str) -> str:
         text: 待归一化的输入字符串。
 
     Returns:
-        str: 统一使用 '\\n' 换行且两端无冗余空白的字符串。
+        统一使用 '\n' 换行且两端无冗余空白的字符串。
     """
     return (
         text.replace("\r\n", "\n")
@@ -48,7 +48,7 @@ def split_paragraphs(text: str) -> list[str]:
         text: 待划分的全文文本。
 
     Returns:
-        list[str]: 非空段落字符串列表。
+        非空段落字符串列表。
     """
     text = normalize_text(text)
     paragraphs = re.split(r"\n\s*\n", text)
@@ -71,7 +71,7 @@ def split_text_to_child_chunks(
         max_len: 单个子块最大字符数（默认 600）。
 
     Returns:
-        list[str]: 切分后的子块文本列表。
+        切分后的子块文本列表。
     """
     text = normalize_text(text)
 
@@ -133,7 +133,7 @@ def split_text_to_parent_segments(
         max_chars: 单个父块最大字符数（默认 4,000）。
 
     Returns:
-        list[str]: 聚合后的父块片段列表。
+        聚合后的父块片段列表。
     """
     text = text.strip()
 
@@ -238,14 +238,14 @@ def build_embedding_text(
     """将章节面包屑标题路径拼入待向量化文本，增强向量索引的语义上下文。
 
     注意：子块的 content 字段仍保存纯净的正文原始切片；
-    仅有 embedding_text 拼接了前缀 '标题路径：...\\n正文：...'。
+    仅有 embedding_text 拼接了前缀 '标题路径：...\n正文：...'。
 
     Args:
         section_path: 章节路径列表（如 ['第1章 概述', '1.1 背景']）。
         content: 子块正文内容。
 
     Returns:
-        str: 拼接后的待 Embedding 向量化文本。
+        拼接后的待 Embedding 向量化文本。
     """
     if section_path:
         return f"标题路径：{'>'.join(section_path)}\n正文：{content}"

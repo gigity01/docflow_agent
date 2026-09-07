@@ -25,6 +25,6 @@ class RuntimeWorker:
             plan_id: 目标 Plan ID。
 
         Returns:
-            ExecutePlanResult: 步进执行结果。
+            步进执行结果。
         """
         return await self._runtime.execute_next(plan_id)

@@ -27,7 +27,7 @@ class PlanRepository:
             plan: Plan 实体对象。
 
         Returns:
-            Plan: 刷新后的 Plan 实体。
+            刷新后的 Plan 实体。
         """
         self.db.add(plan)
         self.db.flush()
@@ -41,7 +41,7 @@ class PlanRepository:
             plan_id: 规划唯一标识。
 
         Returns:
-            Plan | None: 查询到的 Plan 实体或 None。
+            查询到的 Plan 实体或 None。
         """
         return (
             self.db.query(Plan)
@@ -61,7 +61,7 @@ class PlanRepository:
             revision: 修订版本号。
 
         Returns:
-            Plan | None: 查询到的 Plan 实体或 None。
+            查询到的 Plan 实体或 None。
         """
         return (
             self.db.query(Plan)
@@ -79,7 +79,7 @@ class PlanRepository:
             turn_id: 关联的 Turn ID。
 
         Returns:
-            Plan | None: 最新版本的 Plan 实体或 None。
+            最新版本的 Plan 实体或 None。
         """
         return (
             self.db.query(Plan)
@@ -100,7 +100,7 @@ class PlanRepository:
             revision: 修订版本号。
 
         Returns:
-            Plan | None: 查询到的 Plan 实体或 None。
+            查询到的 Plan 实体或 None。
         """
         return (
             self.db.query(Plan)
@@ -123,7 +123,7 @@ class PlanRepository:
             revision: 修订版本号。
 
         Returns:
-            Plan | None: 锁定的 Plan 实体或 None。
+            锁定的 Plan 实体或 None。
         """
         return (
             self.db.query(Plan)
@@ -142,7 +142,7 @@ class PlanRepository:
             plan_id: 规划唯一标识。
 
         Returns:
-            Plan | None: 锁定的 Plan 实体或 None。
+            锁定的 Plan 实体或 None。
         """
         return (
             self.db.query(Plan)
@@ -168,7 +168,7 @@ class PlanRepository:
             failure_code: 错误分类码。
 
         Returns:
-            Plan: 更新后的 Plan 实体。
+            更新后的 Plan 实体。
         """
         plan.status = status
         plan.failure_code = failure_code
@@ -184,7 +184,7 @@ class PlanRepository:
             task_id: 当前领取的 Task ID（或 None 释放）。
 
         Returns:
-            Plan: 更新后的 Plan 实体。
+            更新后的 Plan 实体。
         """
         plan.current_task_id = task_id
         self.db.flush()

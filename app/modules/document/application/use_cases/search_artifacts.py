@@ -34,7 +34,7 @@ class SearchDocumentArtifactsUseCase:
             query: 产物检索查询参数 DTO。
 
         Returns:
-            SearchDocumentArtifactsResult: 包含产物结果列表与分页总数的 DTO。
+            包含产物结果列表与分页总数的 DTO。
         """
         with self._uow_factory() as uow:
             artifacts = uow.document_artifacts.search(query)

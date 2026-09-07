@@ -25,7 +25,7 @@ class PlannerRunnerPort(Protocol):
             context: 注入的 AgentToolContext 运行时上下文。
 
         Returns:
-            Any: 规划器运行结果（最终状态及可能的澄清提问）。
+            规划器运行结果（最终状态及可能的澄清提问）。
         """
 
 
@@ -60,6 +60,6 @@ class PlanningApplicationPorts:
             exc: 捕获的异常对象。
 
         Returns:
-            bool: 若为完整性约束冲突则返回 True，否则返回 False。
+            若为完整性约束冲突则返回 True，否则返回 False。
         """
         return isinstance(exc, self.integrity_error_type)

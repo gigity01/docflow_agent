@@ -63,7 +63,7 @@ class SendConversationMessageUseCase:
             command: 发送消息命令，包含会话 ID、用户消息内容及可选的澄清源 Turn ID。
 
         Returns:
-            SendConversationMessageResult: 包含会话 ID、Turn ID、Plan ID、状态及上下文选择元数据。
+            包含会话 ID、Turn ID、Plan ID、状态及上下文选择元数据。
 
         Raises:
             ClarificationApplicationError: 澄清回答业务异常。

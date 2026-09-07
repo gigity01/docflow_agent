@@ -37,7 +37,7 @@ class TextChunker(BaseChunker):
             input_data: 切块输入对象，包含 cleaned_path。
 
         Returns:
-            ChunkBuildResult: 构建完成的父块与子块结果。
+            构建完成的父块与子块结果。
         """
         text = input_data.cleaned_path.read_text(
             encoding="utf-8",

@@ -32,7 +32,7 @@ class TxtProcessor(BaseProcessor):
             cleaned_path: 清洗后输出的标准 TXT 路径。
 
         Returns:
-            ProcessResult: 包含字符数、行数、段落数及空行数的处理结果对象。
+            包含字符数、行数、段落数及空行数的处理结果对象。
         """
         source_path = self.validate_source_path(source_path)
         cleaned_path = self.prepare_cleaned_path(cleaned_path)

@@ -91,7 +91,7 @@ class OperationsQueryService:
             query: 文档业务日志多维查询参数。
 
         Returns:
-            DocumentBusinessLogPage: 分页文档业务日志结果集。
+            分页文档业务日志结果集。
         """
         predicate = self._document_predicate(query)
         page = self._document_logs.scan(
@@ -116,7 +116,7 @@ class OperationsQueryService:
             query: 文档生命周期时间线查询条件。
 
         Returns:
-            DocumentExecutionTimelineResult: 包含按时间升序排序的事件序列与截断标志。
+            包含按时间升序排序的事件序列与截断标志。
         """
         page = self._document_logs.scan(
             predicate=lambda event: event.get("document_id")
@@ -142,7 +142,7 @@ class OperationsQueryService:
             query: 文档失败时间线查询条件。
 
         Returns:
-            DocumentFailureTimelineResult: 包含失败事件序列与截断标志。
+            包含失败事件序列与截断标志。
         """
         page = self._document_logs.scan(
             predicate=lambda event: (
@@ -170,7 +170,7 @@ class OperationsQueryService:
             query: 单次操作时间线查询条件。
 
         Returns:
-            DocumentOperationTimelineResult: 包含该操作内部事件流及关联 workflow_id 和 attempt。
+            包含该操作内部事件流及关联 workflow_id 和 attempt。
         """
         page = self._document_logs.scan(
             predicate=lambda event: self._operation_id(event)
@@ -200,7 +200,7 @@ class OperationsQueryService:
             query: 工作流时间线查询条件。
 
         Returns:
-            DocumentWorkflowTimelineResult: 包含完整工作流事件流与截断标志。
+            包含完整工作流事件流与截断标志。
         """
         page = self._document_logs.scan(
             predicate=lambda event: event.get("workflow_id")
@@ -226,7 +226,7 @@ class OperationsQueryService:
             query: Tool 审计多维查询参数。
 
         Returns:
-            AgentToolAuditPage: 分页 Tool 审计事件结果集。
+            分页 Tool 审计事件结果集。
         """
         page = self._agent_tool_logs.scan(
             predicate=self._audit_predicate(query),
@@ -250,7 +250,7 @@ class OperationsQueryService:
             query: Tool 时间线查询条件（identifier 为 task_id）。
 
         Returns:
-            ToolTimelineResult: 包含聚合配对后的 Tool 调用条目列表。
+            包含聚合配对后的 Tool 调用条目列表。
         """
         return self._tool_timeline(
             query,
@@ -267,7 +267,7 @@ class OperationsQueryService:
             query: Tool 时间线查询条件（identifier 为 agent_run_id）。
 
         Returns:
-            ToolTimelineResult: 包含聚合配对后的 Tool 调用条目列表。
+            包含聚合配对后的 Tool 调用条目列表。
         """
         return self._tool_timeline(
             query,
@@ -289,7 +289,7 @@ class OperationsQueryService:
             identifier_field: 标识符在日志中的字段名称。
 
         Returns:
-            ToolTimelineResult: 聚合配对后的结果。
+            聚合配对后的结果。
         """
         def predicate(event: dict) -> bool:
             if event.get(identifier_field) != query.identifier:

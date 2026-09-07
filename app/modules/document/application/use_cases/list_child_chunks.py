@@ -32,7 +32,7 @@ class ListChildChunksUseCase:
             query: 子块查询过滤条件 DTO。
 
         Returns:
-            ListChildChunksResult: 包含子块列表与分页元数据的 DTO。
+            包含子块列表与分页元数据的 DTO。
         """
         with self._uow_factory() as uow:
             chunks = uow.child_chunks.search(query)

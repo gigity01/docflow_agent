@@ -32,7 +32,7 @@ class DocumentArtifactRepository:
             data: 包含产物元数据的创建 DTO。
 
         Returns:
-            DocumentArtifact: 插入并包含主键的派生产物实体。
+            插入并包含主键的派生产物实体。
         """
         artifact = DocumentArtifact(
             document_id=data.document_id,
@@ -65,7 +65,7 @@ class DocumentArtifactRepository:
             artifact_id: 产物主键 ID。
 
         Returns:
-            DocumentArtifact | None: 找到返回实体，否则返回 None。
+            找到返回实体，否则返回 None。
         """
         return (
             self.db.query(DocumentArtifact)
@@ -80,7 +80,7 @@ class DocumentArtifactRepository:
             artifact_code: 产物业务编号。
 
         Returns:
-            DocumentArtifact | None: 找到返回实体，否则返回 None。
+            找到返回实体，否则返回 None。
         """
         return (
             self.db.query(DocumentArtifact)
@@ -98,7 +98,7 @@ class DocumentArtifactRepository:
             document_id: 所属文档 ID。
 
         Returns:
-            list[DocumentArtifact]: 派生产物实体列表。
+            派生产物实体列表。
         """
         return (
             self.db.query(DocumentArtifact)
@@ -120,7 +120,7 @@ class DocumentArtifactRepository:
             filters: 产物高级检索参数 DTO。
 
         Returns:
-            list[DocumentArtifact]: 匹配的产物实体列表。
+            匹配的产物实体列表。
         """
         return (
             self._search_query(filters)
@@ -140,7 +140,7 @@ class DocumentArtifactRepository:
             filters: 产物高级检索参数 DTO。
 
         Returns:
-            int: 匹配总记录数。
+            匹配总记录数。
         """
         return self._search_query(filters).count()
 
@@ -190,7 +190,7 @@ class DocumentArtifactRepository:
             artifact_format: 可选文件格式。
 
         Returns:
-            DocumentArtifact | None: 最新的活跃产物实体。
+            最新的活跃产物实体。
         """
         query = (
             self.db.query(DocumentArtifact)
@@ -224,7 +224,7 @@ class DocumentArtifactRepository:
             artifact_format: 可选文件格式。
 
         Returns:
-            int: 被更新为 superseded 的记录数。
+            被更新为 superseded 的记录数。
         """
         query = (
             self.db.query(DocumentArtifact)

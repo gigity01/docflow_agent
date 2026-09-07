@@ -28,7 +28,7 @@ class GetDocumentUseCase:
             document_id: 待查询的文档主键 ID。
 
         Returns:
-            DocumentResult: 文档完整详情视图。
+            文档完整详情视图。
 
         Raises:
             DocumentApplicationError: 当文档不存在时抛出 404 异常。

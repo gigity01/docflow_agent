@@ -26,7 +26,7 @@ def get_processor(source_type: str) -> BaseProcessor:
         source_type: 源文件类型字符串（如 'txt', 'md', 'markdown', 'csv'）。
 
     Returns:
-        BaseProcessor: 实例化后的清洗处理器。
+        实例化后的清洗处理器。
 
     Raises:
         HTTPException: 当传入不支持清洗的文件类型时抛出 400。
@@ -54,7 +54,7 @@ def get_processor_output_type(source_type: str) -> str:
         source_type: 源格式。
 
     Returns:
-        str: 清洗后的格式（如 'txt', 'md', 'csv'）。
+        清洗后的格式（如 'txt', 'md', 'csv'）。
 
     Raises:
         HTTPException: 不支持的源格式抛出 400。

@@ -73,7 +73,7 @@ def build_context_chain(
         resource_queue: 对应上下文链的热资源队列。
 
     Returns:
-        ContextChain: 组装完成的领域模型实例。
+        组装完成的领域模型实例。
     """
     projected_nodes: list[ContextChainNodeContext] = []
 

@@ -42,7 +42,7 @@ class MarkdownChunker(BaseChunker):
             input_data: 切块输入对象，包含 cleaned_path 与元数据。
 
         Returns:
-            ChunkBuildResult: 构建完成的父块与子块结果。
+            构建完成的父块与子块结果。
         """
         text = input_data.cleaned_path.read_text(
             encoding="utf-8",
@@ -122,7 +122,7 @@ class MarkdownChunker(BaseChunker):
             section: 章节元数据字典（包含 heading_line, start_line, end_line）。
 
         Returns:
-            str: 章节正文字符串。
+            章节正文字符串。
         """
         heading_line = section.get("heading_line")
         start_line = section["start_line"]
@@ -144,7 +144,7 @@ class MarkdownChunker(BaseChunker):
             lines: 文本行列表。
 
         Returns:
-            list[dict]: 章节元数据字典列表（包含 level, title, section_path, start_line, end_line 等）。
+            章节元数据字典列表（包含 level, title, section_path, start_line, end_line 等）。
         """
         if not lines:
             return []

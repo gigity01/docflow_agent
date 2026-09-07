@@ -39,7 +39,7 @@ class TaskDependencyRepository:
             plan_id: 规划 ID。
 
         Returns:
-            list[TaskDependency]: 依赖边列表。
+            依赖边列表。
         """
         return (
             self.db.query(TaskDependency)

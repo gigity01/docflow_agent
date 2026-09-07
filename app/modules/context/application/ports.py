@@ -28,7 +28,7 @@ class ContextRouterPort(Protocol):
             agent_input: 包含当前用户输入与候选未归档链的完整输入。
 
         Returns:
-            ContextSelectionDecision: 历史读取集合选择结果。
+            历史读取集合选择结果。
         """
 
 
@@ -45,7 +45,7 @@ class ConversationLockPort(Protocol):
             conversation_id: 会话唯一标识。
 
         Returns:
-            AsyncContextManager[None]: 异步上下文管理器。
+            异步上下文管理器。
         """
 
 
@@ -69,7 +69,7 @@ class ResourceQueuePort(Protocol):
             expected_version: 期望匹配的数据库资源版本号。
 
         Returns:
-            ContextResourceQueue | None: 缓存命中且版本一致时返回队列模型，否则返回 None。
+            缓存命中且版本一致时返回队列模型，否则返回 None。
         """
 
     async def replace(
@@ -110,7 +110,7 @@ class ResourceQueuePort(Protocol):
             database_version: 数据库更新后的新版本。
 
         Returns:
-            bool: 增量应用成功返回 True，版本不一致或缓存缺失返回 False。
+            增量应用成功返回 True，版本不一致或缓存缺失返回 False。
         """
 
     async def invalidate(
@@ -169,7 +169,7 @@ class ContextChainMapperPort(Protocol):
             resource_queue: 注入的 ContextResourceQueue 对象。
 
         Returns:
-            ContextChain: 组装完毕的领域模型对象。
+            组装完毕的领域模型对象。
         """
 
 

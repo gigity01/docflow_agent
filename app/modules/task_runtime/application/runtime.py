@@ -1,11 +1,8 @@
-"""同一 Plan 并发度为 1 的三段式 Task Runtime 业务核心。
+"""管理任务领取、事务外执行及结果提交，同一 Plan 内串行执行任务。
 
-本模块实现了 Task Runtime 的核心状态机与执行循环：
-1. Claim 阶段（短事务）：抢占下一个依赖全部满足的 pending 任务，生成 execution_id 与 operation_id（ownership token），并在有陈旧执行时触发恢复。
-2. 事务外执行阶段：在能力超时边界内驱动 Executor；超时时请求取消，并等待内部副作用完全静默后才进入补偿。
-3. Completion / Compensation 阶段（短事务）：
-   - 成功：更新 Task 为 SUCCEEDED，持久化执行结果，追加下一个任务唤醒或 Plan 聚合事件。
-   - 失败：进入确定性 Compensator 补偿，采用指数退避重试，补偿成功后释放 ownership 并进入 RETRY_WAIT 或触发 REPLAN_REQUESTED；若补偿超限则进入 COMPENSATION_LOCKED 锁定。
+短事务负责状态变更，耗时执行和补偿在事务外完成。执行归属由
+execution_id / operation_id 校验；旧执行停止写入后才能开始补偿。
+补偿成功后允许重试或重新规划，补偿耗尽则锁定并保留操作归属。
 """
 
 from __future__ import annotations
@@ -104,12 +101,8 @@ class TaskRuntimeService:
     ) -> ExecutePlanResult:
         """执行指定 Plan 的下一个就绪任务或处理挂起的补偿恢复。
 
-        三段式主流程：
-        1. Claim（短事务）：抢占下一个依赖已满足的 pending 任务，生成 execution_id / operation_id；或发现需要补偿的执行。
-        2. 事务外执行：调用能力绑定的 Executor；超时时请求取消，并在 Executor 静默排空后传播取消。
-        3. Completion / Failure / Compensation（短事务）：
-           - 成功：更新 Task 为 succeeded，追加 Outbox 事件（下一个 Task 唤醒或 Plan 聚合）。
-           - 失败：进入补偿流程，补偿成功后根据重试次数决定重试或发起 Replan。
+        优先恢复历史执行；只有不存在待处理恢复项时才执行新任务。
+        Executor 在事务外运行，完成后通过归属校验提交结果。
 
         Args:
             plan_id: 目标 Plan ID。
@@ -118,9 +111,9 @@ class TaskRuntimeService:
             compensation_operation_id: 定向恢复的 operation_id（若适用）。
 
         Returns:
-            ExecutePlanResult: 步进执行结果。
+            步进执行结果。
         """
-        # 第一阶段：短事务 Claim 抢占任务或发现恢复项
+        # 先提交领取事务，避免执行器的外部调用长时间占用行锁。
         claimed = await asyncio.to_thread(
             self._claim_next,
             ClaimNextTaskInput(plan_id=plan_id),
@@ -138,7 +131,7 @@ class TaskRuntimeService:
                     recovery.execution_id if recovery is not None else None
                 ),
             )
-        # 若需要补偿历史失败副作用，先执行补偿
+        # 历史副作用未清理前，不允许同一 Plan 继续推进。
         if claimed.recovery is not None:
             recovery = claimed.recovery
             definition = self._capabilities.require(
@@ -152,7 +145,6 @@ class TaskRuntimeService:
         if claimed.task is None:
             return ExecutePlanResult(plan_id=plan_id, outcome=claimed.outcome)
 
-        # 第二阶段：事务外执行 Capability Executor
         task = claimed.task
         definition = self._capabilities.require(task.capability_code)
         executor = self._executors.require(definition.executor_code)

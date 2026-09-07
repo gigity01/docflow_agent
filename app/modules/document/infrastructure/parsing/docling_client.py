@@ -53,7 +53,7 @@ class DoclingClient:
             table_mode: 表格解析模式（'fast' 或 'accurate'，默认 'fast'）。
 
         Returns:
-            MarkdownConvertResult: 转换成功的领域结果对象。
+            转换成功的领域结果对象。
 
         Raises:
             FileNotFoundError: 源文件不存在。

@@ -1,7 +1,7 @@
 """可靠消息发件箱（Outbox）与收件箱（Inbox）仓储实现。
 
 提供基于 SQLAlchemy Session 的数据库持久化与行级锁查询能力：
-- OutboxRepository: 支持基于 `FOR UPDATE SKIP LOCKED` 的无锁争用批量扫描及单条锁查询。
+- OutboxRepository: 批量查询时跳过已锁定行，也支持单条事件锁查询。
 - InboxRepository: 支持基于联合主键/唯一约束的存在性检查与写入。
 """
 
@@ -36,7 +36,7 @@ class OutboxRepository:
             event: 待添加的 OutboxEvent 实体。
 
         Returns:
-            OutboxEvent: 已添加到会话中的实体实例。
+            已添加到会话中的实体实例。
         """
         self.db.add(event)
         self.db.flush()
@@ -51,7 +51,8 @@ class OutboxRepository:
     ) -> list[OutboxEvent]:
         """按状态和生效时间范围以悲观行锁方式批量查询待处理事件。
 
-        使用 `with_for_update(skip_locked=True)` 确保多个并发发布进程不会产生行锁阻塞或重复投递。
+        SKIP LOCKED 跳过其他事务已锁定的行。锁仅在当前事务内有效，
+        不保证后续网络发布不会重复；消费端仍需幂等处理。
 
         Args:
             status: 事件状态过滤（如 PENDING）。
@@ -59,7 +60,7 @@ class OutboxRepository:
             limit: 最大拉取数量。
 
         Returns:
-            list[OutboxEvent]: 锁定并获取的待发布事件列表。
+            锁定并获取的待发布事件列表。
         """
         return (
             self.db.query(OutboxEvent)
@@ -80,7 +81,7 @@ class OutboxRepository:
             event_id: 事件全局唯一标识符。
 
         Returns:
-            OutboxEvent | None: 锁定的事件实体；若不存在则返回 None。
+            锁定的事件实体；若不存在则返回 None。
         """
         return (
             self.db.query(OutboxEvent)
@@ -112,7 +113,7 @@ class InboxRepository:
             event_id: 事件唯一标识。
 
         Returns:
-            bool: True 表示已记录存在（已处理），False 表示尚未消费。
+            True 表示已记录存在（已处理），False 表示尚未消费。
         """
         return (
             self.db.query(InboxEvent)
@@ -131,7 +132,7 @@ class InboxRepository:
             event: 待添加的 InboxEvent 实体。
 
         Returns:
-            InboxEvent: 登记后的实体实例。
+            登记后的实体实例。
         """
         self.db.add(event)
         self.db.flush()

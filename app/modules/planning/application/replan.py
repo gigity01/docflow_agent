@@ -95,7 +95,7 @@ class ReplanUseCase:
             event: ReplanRequested 事件负载。
 
         Returns:
-            RunPlanningResult | None: 规划执行结果；若事件已消费或达到修订上限则返回 None。
+            规划执行结果；若事件已消费或达到修订上限则返回 None。
         """
         # 第一阶段：短事务准备新版本 Plan 实体并记录 Inbox
         prepared = self._prepare_revision(event)
@@ -124,7 +124,7 @@ class ReplanUseCase:
             event: ReplanRequested 事件。
 
         Returns:
-            tuple[str, int] | None: (新 plan_id, revision) 或 None（无需继续执行）。
+            (新 plan_id, revision) 或 None（无需继续执行）。
 
         Raises:
             ValueError: 当关联 Plan/Turn 不存在或上下文归属不一致时。

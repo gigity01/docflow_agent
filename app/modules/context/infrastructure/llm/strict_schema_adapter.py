@@ -23,7 +23,7 @@ def resolve_local_schema_refs(
         definitions: 包含定义字典的 $defs 集合。
 
     Returns:
-        Any: 展开 $ref 引用后的 Schema 节点。
+        展开 $ref 引用后的 Schema 节点。
 
     Raises:
         ContextAgentOutputError: 引用了不存在的 definition 名称时抛出。
@@ -73,7 +73,7 @@ def normalize_strict_tool_schema(value: Any) -> Any:
         value: 原始或已展开 $ref 的 Schema 节点。
 
     Returns:
-        Any: 归一化后的 Schema 节点。
+        归一化后的 Schema 节点。
     """
     if isinstance(value, list):
         return [normalize_strict_tool_schema(item) for item in value]
@@ -105,7 +105,7 @@ def build_context_selection_tool_schema() -> dict[str, Any]:
     """从 ContextSelectionDecision Pydantic 契约生成 DeepSeek strict tool 参数 Schema。
 
     Returns:
-        dict[str, Any]: 符合 DeepSeek strict 规范的 JSON Schema 字典。
+        符合 DeepSeek strict 规范的 JSON Schema 字典。
 
     Raises:
         ContextAgentOutputError: 生成结果不是有效 JSON 对象时抛出。

@@ -42,11 +42,6 @@ class ProcessDocumentOperationCompensator:
     """
 
     def __init__(self, compensator: ProcessDocumentCompensator) -> None:
-        """初始化 ProcessDocumentOperationCompensator。
-
-        Args:
-            compensator: ProcessDocumentCompensator 实例。
-        """
         self._compensator = compensator
 
     async def compensate(
@@ -79,11 +74,6 @@ class BuildDocumentChunksOperationCompensator:
     """
 
     def __init__(self, compensator: BuildChunksCompensator) -> None:
-        """初始化 BuildDocumentChunksOperationCompensator。
-
-        Args:
-            compensator: BuildChunksCompensator 实例。
-        """
         self._compensator = compensator
 
     async def compensate(
@@ -118,11 +108,6 @@ class IndexDocumentVectorsOperationCompensator:
     """
 
     def __init__(self, compensator: IndexVectorsCompensator) -> None:
-        """初始化 IndexDocumentVectorsOperationCompensator。
-
-        Args:
-            compensator: IndexVectorsCompensator 实例。
-        """
         self._compensator = compensator
 
     async def compensate(

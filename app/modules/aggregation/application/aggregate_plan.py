@@ -131,7 +131,7 @@ class AggregatePlanUseCase:
             plan_id: Plan 唯一标识。
 
         Returns:
-            _AggregationSnapshot: 校验通过后的聚合快照对象。
+            校验通过后的聚合快照对象。
 
         Raises:
             ValueError: Plan 状态非 COMPLETED、Task 存在非 SUCCEEDED、执行记录不完整或缺少 Context Selection。

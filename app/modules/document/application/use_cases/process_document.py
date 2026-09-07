@@ -146,7 +146,7 @@ class ProcessDocumentUseCase:
             operation_context: 可选的操作上下文追踪信息。
 
         Returns:
-            ProcessDocumentResult: 处理结果 DTO（包含 cleaned_uri 等）。
+            处理结果 DTO（包含 cleaned_uri 等）。
 
         Raises:
             DocumentApplicationError: 状态不合法（409）、未找到（404）或执行失败（500）。
@@ -272,7 +272,7 @@ def _claim_processing(
         ports: 端口容器。
 
     Returns:
-        ProcessingContext: 领取成功后的不可变快照。
+        领取成功后的不可变快照。
     """
     with ports.uow_factory() as uow:
         document = uow.documents.get_by_id_for_update(document_id)
@@ -338,7 +338,7 @@ def _execute_processing(
         settings: 处理配置。
 
     Returns:
-        ProcessingExecutionResult: 事务外执行结果。
+        事务外执行结果。
     """
     if not context.source_path.exists():
         raise DocumentApplicationError(
@@ -435,7 +435,7 @@ def _complete_processing(
         ports: 端口容器。
 
     Returns:
-        ProcessDocumentResult: 完成响应。
+        完成响应。
     """
     with ports.uow_factory() as uow:
         document = uow.documents.get_by_id_for_update(result.document_id)
@@ -497,7 +497,7 @@ def _promote_processing_artifacts(
         settings: 处理路径配置。
 
     Returns:
-        ProcessingExecutionResult: 更新了物理路径后的执行结果。
+        更新了物理路径后的执行结果。
     """
     cleaned_dir = _operation_scoped_dir(
         settings.cleaned_storage_dir,
@@ -575,7 +575,7 @@ def _fail_processing(
         ports: 端口容器。
 
     Returns:
-        FailureStateResult: 状态变更快照。
+        状态变更快照。
     """
     del error
     with ports.uow_factory() as uow:
@@ -644,7 +644,7 @@ class ProcessDocumentCompensator:
             operation_id: 需补偿的操作 ID。
 
         Returns:
-            FailureStateResult: 状态变更结果。
+            状态变更结果。
         """
         failure_result = _fail_processing(
             document_id,

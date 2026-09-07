@@ -31,7 +31,7 @@ class ClarificationRepository:
             request: 待添加的 ClarificationRequest 实体实例。
 
         Returns:
-            ClarificationRequest: 添加后的实体对象。
+            添加后的实体对象。
         """
         self.db.add(request)
         self.db.flush()
@@ -46,7 +46,7 @@ class ClarificationRepository:
             conversation_id: 会话唯一标识。
 
         Returns:
-            ClarificationRequest | None: 命中的澄清请求实体，若无则返回 None。
+            命中的澄清请求实体，若无则返回 None。
         """
         return (
             self.db.query(ClarificationRequest)
@@ -69,7 +69,7 @@ class ClarificationRepository:
             source_turn_id: 发起澄清提问的源 Turn 标识。
 
         Returns:
-            ClarificationRequest | None: 命中的澄清请求实体，若无则返回 None。
+            命中的澄清请求实体，若无则返回 None。
         """
         return (
             self.db.query(ClarificationRequest)
@@ -85,7 +85,7 @@ class ClarificationRepository:
             plan_id: 发起澄清的源 Plan 标识。
 
         Returns:
-            ClarificationRequest | None: 命中的澄清请求实体，若无则返回 None。
+            命中的澄清请求实体，若无则返回 None。
         """
         return (
             self.db.query(ClarificationRequest)
@@ -102,7 +102,7 @@ class ClarificationRepository:
             plan_id: 发起澄清的源 Plan 标识。
 
         Returns:
-            ClarificationRequest | None: 命中的澄清请求实体，若无则返回 None。
+            命中的澄清请求实体，若无则返回 None。
         """
         return (
             self.db.query(ClarificationRequest)

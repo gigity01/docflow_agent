@@ -44,7 +44,7 @@ class ContextQueryService:
             turn_id: Turn 唯一标识。
 
         Returns:
-            ConversationTurnQueryResult: 命中的 Turn 查询结果 DTO。
+            命中的 Turn 查询结果 DTO。
 
         Raises:
             ContextQueryError: 当 Turn 不存在时抛出 404。
@@ -65,7 +65,7 @@ class ContextQueryService:
             query: 搜索过滤与分页参数。
 
         Returns:
-            ConversationTurnListResult: 包含结果列表与分页总数。
+            包含结果列表与分页总数。
         """
         with self._uow_factory() as uow:
             items = uow.context.search_turns(query)
@@ -86,7 +86,7 @@ class ContextQueryService:
             chain_id: Context Chain 唯一标识。
 
         Returns:
-            ContextChainQueryResult: 命中的 Chain 查询结果 DTO。
+            命中的 Chain 查询结果 DTO。
 
         Raises:
             ContextQueryError: 当 Chain 不存在时抛出 404。
@@ -107,7 +107,7 @@ class ContextQueryService:
             query: 搜索过滤与分页参数。
 
         Returns:
-            ContextChainListResult: 包含结果列表与分页总数。
+            包含结果列表与分页总数。
         """
         with self._uow_factory() as uow:
             items = uow.context.search_chains(query)
@@ -131,7 +131,7 @@ class ContextQueryService:
             query: 搜索过滤与分页参数。
 
         Returns:
-            ContextChainNodeListResult: 包含结果列表与分页总数。
+            包含结果列表与分页总数。
         """
         with self._uow_factory() as uow:
             items = uow.context.search_nodes(query)
@@ -155,7 +155,7 @@ class ContextQueryService:
             query: 搜索过滤与分页参数。
 
         Returns:
-            ContextChainResourceListResult: 包含结果列表与分页总数。
+            包含结果列表与分页总数。
         """
         with self._uow_factory() as uow:
             items = uow.context.search_resources(query)
@@ -179,7 +179,7 @@ class ContextQueryService:
             query: 搜索过滤与分页参数。
 
         Returns:
-            ContextSelectionRecordListResult: 包含结果列表与分页总数。
+            包含结果列表与分页总数。
         """
         with self._uow_factory() as uow:
             items = uow.context.search_selection_records(query)

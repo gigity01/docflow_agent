@@ -61,11 +61,6 @@ class DeterministicProcessDocumentExecutor:
     """
 
     def __init__(self, use_case) -> None:
-        """初始化 DeterministicProcessDocumentExecutor。
-
-        Args:
-            use_case: ProcessDocumentUseCase 实例。
-        """
         self._use_case = use_case
 
     async def execute(
@@ -80,7 +75,7 @@ class DeterministicProcessDocumentExecutor:
             context: 运行时上下文。
 
         Returns:
-            TaskExecutorResult: 执行产出与资源引用。
+            执行产出与资源引用。
         """
         validated = ProcessDocumentTaskPayload.model_validate(payload)
         result = await _execute_document_use_case(
@@ -104,11 +99,6 @@ class DeterministicBuildDocumentChunksExecutor:
     """未配置 Agent Provider 时的确定性文档切块（Build Chunks）后备执行器。"""
 
     def __init__(self, use_case) -> None:
-        """初始化 DeterministicBuildDocumentChunksExecutor。
-
-        Args:
-            use_case: BuildChunksUseCase 实例。
-        """
         self._use_case = use_case
 
     async def execute(
@@ -123,7 +113,7 @@ class DeterministicBuildDocumentChunksExecutor:
             context: 运行时上下文。
 
         Returns:
-            TaskExecutorResult: 执行产出与资源引用。
+            执行产出与资源引用。
         """
         validated = BuildDocumentChunksTaskPayload.model_validate(payload)
         result = await _execute_document_use_case(
@@ -148,11 +138,6 @@ class DeterministicIndexDocumentVectorsExecutor:
     """未配置 Agent Provider 时的确定性向量索引（Index Vectors）后备执行器。"""
 
     def __init__(self, use_case) -> None:
-        """初始化 DeterministicIndexDocumentVectorsExecutor。
-
-        Args:
-            use_case: IndexVectorsUseCase 实例。
-        """
         self._use_case = use_case
 
     async def execute(
@@ -167,7 +152,7 @@ class DeterministicIndexDocumentVectorsExecutor:
             context: 运行时上下文。
 
         Returns:
-            TaskExecutorResult: 执行产出与资源引用。
+            执行产出与资源引用。
         """
         validated = IndexDocumentVectorsTaskPayload.model_validate(payload)
         result = await _execute_document_use_case(

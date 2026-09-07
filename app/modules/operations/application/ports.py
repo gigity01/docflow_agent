@@ -43,7 +43,7 @@ class JsonlLogQueryPort(Protocol):
             ascending: 是否按时间升序排列（默认 False，即倒序排列）。
 
         Returns:
-            JsonlScanPage: 包含匹配原始字典列表和下一页游标的分页对象。
+            包含匹配原始字典列表和下一页游标的分页对象。
 
         Raises:
             OperationsQueryError: 当参数非法、游标无效或文件读取异常时抛出。

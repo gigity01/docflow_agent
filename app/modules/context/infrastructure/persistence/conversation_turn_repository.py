@@ -27,7 +27,7 @@ class ConversationTurnRepository:
             turn_id: Turn 唯一标识。
 
         Returns:
-            ConversationTurn | None: 命中的实体或 None。
+            命中的实体或 None。
         """
         return (
             self.db.query(ConversationTurn)
@@ -45,7 +45,7 @@ class ConversationTurnRepository:
             turn_id: Turn 唯一标识。
 
         Returns:
-            ConversationTurn | None: 锁定的实体或 None。
+            锁定的实体或 None。
         """
         return (
             self.db.query(ConversationTurn)
@@ -66,7 +66,7 @@ class ConversationTurnRepository:
             task_ids: Task ID 列表。
 
         Returns:
-            ConversationTurn: 更新后的实体。
+            更新后的实体。
         """
         turn.task_ids = list(task_ids)
         self.db.flush()
@@ -80,7 +80,7 @@ class ConversationTurnRepository:
             status: 新状态字符串（如 ContextTurnStatus）。
 
         Returns:
-            ConversationTurn: 更新后的实体。
+            更新后的实体。
         """
         turn.status = status
         self.db.flush()

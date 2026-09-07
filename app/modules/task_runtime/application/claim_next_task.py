@@ -13,11 +13,6 @@ class ClaimNextTaskUseCase:
     """任务领取用例类。"""
 
     def __init__(self, runtime) -> None:
-        """初始化 ClaimNextTaskUseCase。
-
-        Args:
-            runtime: TaskRuntimeService 实例。
-        """
         self._runtime = runtime
 
     def execute(self, command: ClaimNextTaskInput) -> ClaimNextTaskResult:
@@ -27,6 +22,6 @@ class ClaimNextTaskUseCase:
             command: Claim 输入参数。
 
         Returns:
-            ClaimNextTaskResult: 任务领取或补偿恢复快照结果。
+            任务领取或补偿恢复快照结果。
         """
         return self._runtime.claim_next_task(command)

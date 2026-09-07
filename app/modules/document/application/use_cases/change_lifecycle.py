@@ -129,7 +129,7 @@ class ChangeDocumentLifecycleUseCase:
             replaced_by: 若 reason 为 REPLACED，必须传入替代文档的 ID。
 
         Returns:
-            DocumentResult: 更新后的文档详情 DTO。
+            更新后的文档详情 DTO。
 
         Raises:
             DocumentApplicationError: 参数非法或状态冲突时抛出。

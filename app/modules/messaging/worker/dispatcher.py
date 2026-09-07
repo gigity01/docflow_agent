@@ -103,7 +103,7 @@ class RuntimeEventDispatcher:
             event_id: 待检查的事件唯一标识。
 
         Returns:
-            bool: True 表示已在 Inbox 中记录，False 表示未处理。
+            True 表示已在 Inbox 中记录，False 表示未处理。
         """
         with self._uow_factory() as uow:
             return uow.inbox.exists(self.CONSUMER_NAME, event_id)

@@ -32,7 +32,7 @@ class ListDocumentsUseCase:
             query: 包含 kb_id、status、source_type、lifecycle_status 及分页限制的查询 DTO。
 
         Returns:
-            ListDocumentsResult: 包含文档摘要项与总记录数的分页结果 DTO。
+            包含文档摘要项与总记录数的分页结果 DTO。
         """
         with self._uow_factory() as uow:
             documents = uow.documents.list_filtered(

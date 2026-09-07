@@ -20,7 +20,7 @@ def derive_context_selection_mode(
         relevant_chain_ids: 命中的上下文链 ID 列表。
 
     Returns:
-        ContextSelectionMode: NO_CONTEXT (0条), SINGLE_CONTEXT (1条), MULTI_CONTEXT (>=2条)。
+        NO_CONTEXT (0条), SINGLE_CONTEXT (1条), MULTI_CONTEXT (>=2条)。
     """
     count = len(relevant_chain_ids)
     if count == 0:
@@ -50,7 +50,7 @@ def validate_context_selection(
         conversation_id: 当前会话 ID。
 
     Returns:
-        ContextSelectionDecision: 规范化去重后的决策对象。
+        规范化去重后的决策对象。
 
     Raises:
         ValueError: 候选链不属于当前会话、存在重复链、选中了未知链或已归档链。

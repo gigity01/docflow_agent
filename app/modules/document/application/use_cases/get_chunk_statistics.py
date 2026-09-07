@@ -28,7 +28,7 @@ class GetDocumentChunkStatisticsUseCase:
             document_id: 目标文档 ID。
 
         Returns:
-            DocumentChunkStatisticsResult: 统计结果 DTO。
+            统计结果 DTO。
 
         Raises:
             DocumentApplicationError: 文档不存在时抛出 404。

@@ -36,7 +36,7 @@ class DocumentRepository:
             document: 待创建的文档实体。
 
         Returns:
-            Document: 包含自增主键与默认时间戳的文档实体。
+            包含自增主键与默认时间戳的文档实体。
         """
         self.db.add(document)
         self.db.flush()
@@ -50,7 +50,7 @@ class DocumentRepository:
             document_id: 文档主键 ID。
 
         Returns:
-            Document | None: 找到返回实体，否则返回 None。
+            找到返回实体，否则返回 None。
         """
         return (
             self.db.query(Document)
@@ -79,7 +79,7 @@ class DocumentRepository:
             offset: 偏移量。
 
         Returns:
-            list[Document]: 文档实体列表。
+            文档实体列表。
         """
         query = self._filtered_query(
             kb_id=kb_id,
@@ -111,7 +111,7 @@ class DocumentRepository:
             lifecycle_status: 业务生命周期状态。
 
         Returns:
-            int: 匹配的文档总记录数。
+            匹配的文档总记录数。
         """
         return self._filtered_query(
             kb_id=kb_id,
@@ -127,7 +127,7 @@ class DocumentRepository:
             query: 高级检索参数 DTO。
 
         Returns:
-            list[Document]: 匹配的文档实体列表。
+            匹配的文档实体列表。
         """
         filtered = self._search_query(query)
         sort_column = {
@@ -156,7 +156,7 @@ class DocumentRepository:
             query: 高级检索参数 DTO。
 
         Returns:
-            int: 匹配总记录数。
+            匹配总记录数。
         """
         return self._search_query(query).count()
 
@@ -175,7 +175,7 @@ class DocumentRepository:
             lifecycle_status: 可选业务生命周期状态。
 
         Returns:
-            int: 匹配文档数。
+            匹配文档数。
         """
         query = self.db.query(Document.id).filter(Document.kb_id == kb_id)
         if status is not None:
@@ -299,7 +299,7 @@ class DocumentRepository:
             content_hash: 文件 SHA-256 哈希。
 
         Returns:
-            Document | None: 冲突的文档实体或 None。
+            冲突的文档实体或 None。
         """
         return (
             self.db.query(Document)
@@ -317,7 +317,7 @@ class DocumentRepository:
             document_id: 目标文档 ID。
 
         Returns:
-            Document | None: 锁定后的文档实体或 None。
+            锁定后的文档实体或 None。
         """
         return (
             self.db.query(Document)
@@ -336,7 +336,7 @@ class DocumentRepository:
             document_ids: 待锁定的文档 ID 迭代器。
 
         Returns:
-            list[Document]: 锁定后的文档实体列表。
+            锁定后的文档实体列表。
         """
         ordered_ids = sorted(set(document_ids))
         if not ordered_ids:
@@ -362,7 +362,7 @@ class DocumentRepository:
             status: 目标状态字符串。
 
         Returns:
-            Document: 更新后的文档实体。
+            更新后的文档实体。
         """
         document.status = status
         self.db.flush()
@@ -382,7 +382,7 @@ class DocumentRepository:
             status: 目标状态字符串（通常为 'processed'）。
 
         Returns:
-            Document: 更新后的文档实体。
+            更新后的文档实体。
         """
         document.cleaned_uri = cleaned_uri
         document.status = status
@@ -404,7 +404,7 @@ class DocumentRepository:
             replaced_by: 若原因为 replaced，传入替代文档的 ID。
 
         Returns:
-            Document: 更新后的文档实体。
+            更新后的文档实体。
         """
         document.lifecycle_status = lifecycle_status
         document.active_content_hash = None

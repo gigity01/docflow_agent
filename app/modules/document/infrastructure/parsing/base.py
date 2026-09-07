@@ -42,7 +42,7 @@ class BaseProcessor(ABC):
             source_path: 待校验路径。
 
         Returns:
-            Path: 解析后的绝对路径。
+            解析后的绝对路径。
 
         Raises:
             FileNotFoundError: 路径不存在。
@@ -62,7 +62,7 @@ class BaseProcessor(ABC):
             cleaned_path: 输出目标路径。
 
         Returns:
-            Path: 解析后的绝对输出路径。
+            解析后的绝对输出路径。
 
         Raises:
             ValueError: 输出目标已存在且为目录。

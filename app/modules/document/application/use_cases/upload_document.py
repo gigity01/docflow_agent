@@ -190,7 +190,7 @@ class UploadDocumentUseCase:
             operation_context: 可选的操作上下文追踪对象。
 
         Returns:
-            DocumentResult: 创建成功的文档领域数据 DTO。
+            创建成功的文档领域数据 DTO。
 
         Raises:
             DocumentApplicationError: 参数不合法（400）或知识库内文件重复（409）。

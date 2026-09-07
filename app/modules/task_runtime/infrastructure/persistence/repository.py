@@ -29,7 +29,7 @@ class TaskExecutionRepository:
             execution: TaskExecution 实体对象。
 
         Returns:
-            TaskExecution: 刷新后的实体。
+            刷新后的实体。
         """
         self.db.add(execution)
         self.db.flush()
@@ -42,7 +42,7 @@ class TaskExecutionRepository:
             execution_id: 执行唯一标识。
 
         Returns:
-            TaskExecution | None: 锁定的实体或 None。
+            锁定的实体或 None。
         """
         return (
             self.db.query(TaskExecution)
@@ -58,7 +58,7 @@ class TaskExecutionRepository:
             plan_id: 规划 ID。
 
         Returns:
-            list[TaskExecution]: 执行记录列表。
+            执行记录列表。
         """
         return (
             self.db.query(TaskExecution)
@@ -77,7 +77,7 @@ class TaskExecutionRepository:
             task_id: 任务 ID。
 
         Returns:
-            TaskExecution | None: 锁定的实体或 None。
+            锁定的实体或 None。
         """
         return (
             self.db.query(TaskExecution)
@@ -100,7 +100,7 @@ class TaskExecutionRepository:
             task_id: 任务 ID。
 
         Returns:
-            TaskExecution | None: 锁定的实体或 None。
+            锁定的实体或 None。
         """
         return (
             self.db.query(TaskExecution)

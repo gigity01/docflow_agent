@@ -77,7 +77,7 @@ class CsvProcessor(BaseProcessor):
             cleaned_path: 清洗后输出的标准 CSV 目标路径。
 
         Returns:
-            ProcessResult: 包含表头元数据、行列数统计的处理结果。
+            包含表头元数据、行列数统计的处理结果。
 
         Raises:
             CsvProcessError: 格式损坏、表头非法或行列数不匹配时抛出。

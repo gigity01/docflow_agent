@@ -1,8 +1,7 @@
-"""可在独立 Worker 进程循环调用的发件箱（Outbox）发布器。
+"""将数据库 Outbox 事件发布到消息队列，并单独回写投递状态。
 
-基于 Transactional Outbox 模式，在短事务内批量拉取未发布的事件，
-通过 MessagePublisherPort 发布至底层消息队列（如 Redis Streams），
-并根据发布结果在独立短事务中更新状态为 PUBLISHED 或递增重试次数（达到上限后转为 DEAD_LETTER）。
+发布与状态回写不属于同一事务，中途失败可能造成重复投递。
+消费端需要按 event_id 幂等处理；投递失败达到上限后进入死信状态。
 """
 
 from __future__ import annotations
@@ -31,12 +30,7 @@ class _EventSnapshot:
 
 
 class OutboxPublisher:
-    """可靠事件发件箱（Transactional Outbox）发布器。
-
-    在独立 Worker 进程中循环拉取数据库中待发布的事件，
-    将其投递至 Redis Stream，并在成功后原子更新状态为 PUBLISHED；
-    发布失败时递增尝试次数，超过最大尝试上限后转入 DEAD_LETTER 死信状态。
-    """
+    """批量发布待发送事件，记录成功状态或失败尝试次数。"""
 
     def __init__(
         self,
@@ -66,13 +60,12 @@ class OutboxPublisher:
             limit: 单批最大处理条数，默认 100。
 
         Returns:
-            int: 本批次成功发布的事件数量。
+            本批次成功发布的事件数量。
         """
-        # 1. 事务内加锁加载待发布事件快照
+        # 将快照带出短事务，网络投递期间不持有数据库行锁。
         snapshots = await asyncio.to_thread(self._load_batch, limit)
         published = 0
 
-        # 2. 逐条发布并根据结果回写状态
         for event in snapshots:
             try:
                 await self._publisher.publish(
@@ -81,11 +74,10 @@ class OutboxPublisher:
                     payload=event.payload,
                 )
             except Exception:
-                # 发布失败：记录重试次数或标记死信
                 await asyncio.to_thread(self._mark_failed, event.event_id)
                 continue
 
-            # 发布成功：标记已发布
+            # 此处失败时事件可能再次投递，不能依赖发布端实现恰好一次。
             await asyncio.to_thread(self._mark_published, event.event_id)
             published += 1
         return published
@@ -93,13 +85,13 @@ class OutboxPublisher:
     def _load_batch(self, limit: int) -> list[_EventSnapshot]:
         """在独立短事务中行锁查询待投递事件快照。
 
-        使用 SKIP LOCKED 防止多 Worker 进程并发扫描时的锁冲突。
+        SKIP LOCKED 跳过当前已锁定的行；事务结束后不会保留领取权。
 
         Args:
             limit: 最大查询条数。
 
         Returns:
-            list[_EventSnapshot]: 待发布的事件快照列表。
+            待发布的事件快照列表。
         """
         with self._uow_factory() as uow:
             events = uow.outbox.list_available_for_update(
