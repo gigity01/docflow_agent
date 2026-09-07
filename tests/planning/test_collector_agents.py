@@ -239,6 +239,11 @@ class CollectorAgentsTest(unittest.IsolatedAsyncioTestCase):
             ["list_documents", "get_document"],
         )
         self.assertEqual(
+            [item.original_tool_call_id for item in evidence_items],
+            ["call-2", "call-1"],
+        )
+        self.assertTrue(all(item.attempt_count == 1 for item in evidence_items))
+        self.assertEqual(
             evidence_items[0].payload,
             {
                 "documents": [{"id": 7}, {"id": 8}],

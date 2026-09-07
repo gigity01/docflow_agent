@@ -423,6 +423,8 @@ class PlannerRunTest(unittest.IsolatedAsyncioTestCase):
                     EvidenceItem(
                         tool_name="get_document",
                         tool_call_id="call-1",
+                        original_tool_call_id="call-1",
+                        attempt_count=1,
                         arguments={"document_id": 7},
                         outcome="succeeded",
                         result_code="document_retrieved",

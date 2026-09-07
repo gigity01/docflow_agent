@@ -56,6 +56,8 @@ class EvidenceItem(BaseModel):
 
     tool_name: str = Field(min_length=1)
     tool_call_id: str = Field(min_length=1)
+    original_tool_call_id: str = Field(min_length=1)
+    attempt_count: int = Field(ge=1)
 
     # ToolCallItem：实际查询输入。
     arguments: dict[str, Any] = Field(default_factory=dict)
@@ -230,6 +232,8 @@ def _extract_evidence_items(new_items: list[Any]) -> list[EvidenceItem]:
                 message=data["message"],
                 retryable=data["retryable"],
                 resource_refs=data["resource_refs"],
+                original_tool_call_id=call_id,
+                attempt_count=1,
                 payload=payload,
             )
         )

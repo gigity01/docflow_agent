@@ -1,5 +1,6 @@
 """在 CI 的隔离 MySQL/Redis 中验证真实 PEL、死信和重放，不调用模型。"""
 
+import asyncio
 import os
 import unittest
 from uuid import uuid4
@@ -61,8 +62,14 @@ class LiveDeliveryRecoveryTest(unittest.IsolatedAsyncioTestCase):
             handler.failed = False
             delivery.retry(failure_id)
             outbox = OutboxPublisher(uow_factory=SQLAlchemyUnitOfWork, publisher=publisher)
-            await outbox.publish_batch()
-            await worker.run_once(block_milliseconds=1)
+            published = 0
+            for _ in range(20):
+                published += await outbox.publish_batch()
+                await worker.run_once(block_milliseconds=1)
+                if handler.success:
+                    break
+                await asyncio.sleep(0.05)
+            self.assertEqual(published, 1)
             self.assertEqual(handler.success, 1)
             await publisher.publish(event_id=token, event_type="runtime.plan_wakeup", payload={"plan_id": token})
             await worker.run_once(block_milliseconds=1)
