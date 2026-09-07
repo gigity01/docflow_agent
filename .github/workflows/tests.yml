@@ -1,0 +1,76 @@
+name: Backend tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+    env:
+      SQLALCHEMY_DATABASE_URL: "sqlite+pysqlite:///:memory:"
+      DASHSCOPE_API_KEY: ci-placeholder-no-model-calls
+      DEEPSEEK_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv sync --locked
+      - name: Unit and simulated integration tests
+        run: uv run --locked python scripts/run_tests.py
+
+  services:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SQLALCHEMY_DATABASE_URL: mysql+pymysql://docflow:docflow-local@127.0.0.1:3307/docflow_demo
+      DASHSCOPE_API_KEY: ci-placeholder-no-model-calls
+      DEEPSEEK_API_KEY: ""
+      REDIS_URL: redis://127.0.0.1:6380/0
+      QDRANT_URL: http://127.0.0.1:6333
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - run: docker compose up -d --wait
+      - name: Initialize an empty MySQL database
+        run: |
+          uv run --locked python scripts/bootstrap_database.py --seed-demo
+          uv run --locked alembic upgrade head
+          uv run --locked alembic current
+      - name: Verify real schema, Redis and Qdrant
+        run: uv run --locked python scripts/check_demo_services.py
+      - name: Refuse repeat initialization
+        run: |
+          if uv run --locked python scripts/bootstrap_database.py --seed-demo; then
+            echo "ERROR: initialized an existing database"
+            exit 1
+          fi
+      - name: Start API and run the document demo
+        run: |
+          uv run --locked uvicorn app.main:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/openapi.json > /dev/null; then break; fi
+            sleep 2
+          done
+          uv run --locked python scripts/demo_document.py --mode direct --skip-index
+      - name: Service diagnostics
+        if: failure()
+        run: |
+          cat api.log 2>/dev/null || true
+          docker compose logs --tail 100
+      - name: Stop isolated CI services
+        if: always()
+        run: docker compose down

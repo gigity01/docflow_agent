@@ -141,7 +141,14 @@ def _install_signal_handlers(stop_event: asyncio.Event) -> None:
     """
     loop = asyncio.get_running_loop()
     for signum in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(signum, stop_event.set)
+        try:
+            loop.add_signal_handler(signum, stop_event.set)
+        except NotImplementedError:
+            # Windows 事件循环不支持 add_signal_handler；主线程转发停机信号。
+            signal.signal(
+                signum,
+                lambda _signum, _frame: loop.call_soon_threadsafe(stop_event.set),
+            )
 
 
 async def run_worker() -> None:
