@@ -23,6 +23,7 @@ def bootstrap_database(*, seed_demo: bool = False) -> None:
         SQLALCHEMY_DATABASE_URL,
     )
     from app.infrastructure.database.base import Base
+    from app.infrastructure.database.connection import connection_options
     from app.infrastructure.database.model_registry import load_all_models
     from app.modules.document.infrastructure.persistence.models.knowledge_base import KnowledgeBase
 
@@ -32,7 +33,7 @@ def bootstrap_database(*, seed_demo: bool = False) -> None:
     # 在建表前检查迁移头唯一性，避免部分初始化。
     if ScriptDirectory.from_config(config).get_current_head() is None:
         raise RuntimeError("未找到 Alembic head")
-    engine = create_engine(SQLALCHEMY_DATABASE_URL)
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connection_options(SQLALCHEMY_DATABASE_URL))
     try:
         with engine.begin() as connection:
             inspector = inspect(connection)

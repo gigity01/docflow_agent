@@ -162,6 +162,7 @@ async def run_worker() -> None:
     redis_worker = RedisStreamWorker(
         container.redis_client,
         dispatcher=container.runtime_event_dispatcher,
+        delivery=container.message_delivery,
         consumer_name=build_consumer_name(),
     )
     # 并发启动 Outbox 发布与 Stream 消费两个异步任务

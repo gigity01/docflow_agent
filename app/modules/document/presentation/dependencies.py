@@ -82,10 +82,10 @@ def get_document_operation_context(
 
 
 def document_upload_form(
-    title: str = Form(...),
-    kb_id: int = Form(...),
-    domain_code: str = Form(...),
-    business_scene: str | None = Form(None),
+    title: str = Form(..., min_length=1, max_length=255),
+    kb_id: int = Form(..., gt=0),
+    domain_code: str = Form(..., min_length=1, max_length=255),
+    business_scene: str | None = Form(None, min_length=1, max_length=255),
     risk_level: Literal["low", "medium", "high", "critical"] = Form("low"),
     effective_at: datetime | None = Form(None),
     expired_at: datetime | None = Form(None),

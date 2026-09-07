@@ -88,6 +88,10 @@ class PlanRepository:
             .first()
         )
 
+    def list_by_turn(self, turn_id: str) -> list[Plan]:
+        return (self.db.query(Plan).filter(Plan.turn_id == turn_id)
+                .order_by(Plan.revision).all())
+
     def get_by_workflow_and_revision(
         self,
         workflow_id: str,

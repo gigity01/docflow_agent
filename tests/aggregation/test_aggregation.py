@@ -20,6 +20,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.infrastructure.database.base import Base
+from app.modules.clarification.infrastructure.persistence.models import ClarificationRequest
 from app.infrastructure.database.model_registry import load_all_models
 from app.infrastructure.database.uow import SQLAlchemyUnitOfWork
 from app.modules.aggregation.application.aggregate_plan import (
@@ -53,6 +54,7 @@ class AggregationTest(unittest.IsolatedAsyncioTestCase):
             expire_on_commit=False,
         )
         self.tables = [
+            ClarificationRequest.__table__,
             ConversationTurn.__table__,
             ContextSelectionRecord.__table__,
             Plan.__table__,

@@ -201,3 +201,5 @@ class RunPlanningResult(BaseModel):
     task_ids: list[str]
     failure_reason: str | None
     clarification_question: str | None = None
+    clarification_id: str | None = None
+    clarification_round: int | None = None

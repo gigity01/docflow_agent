@@ -15,14 +15,14 @@ class SendConversationMessageCommand(BaseModel):
     Attributes:
         conversation_id: 会话唯一标识。
         message: 用户输入的原始文本（或对澄清问题的回复内容）。
-        source_turn_id: 若当前消息是对先前澄清请求的回答，则携带发起澄清的源 Turn ID；否则为 None。
+        clarification_id: 若当前消息是对先前澄清请求的回答，则携带当前澄清请求 ID；否则为 None。
     """
 
     model_config = ConfigDict(extra="forbid")
 
     conversation_id: str = Field(min_length=1, max_length=100)
     message: str = Field(min_length=1)
-    source_turn_id: str | None = Field(
+    clarification_id: str | None = Field(
         default=None,
         min_length=1,
         max_length=100,
@@ -48,7 +48,7 @@ class SendConversationMessageResult(BaseModel):
 
     Attributes:
         conversation_id: 会话唯一标识。
-        turn_id: 本轮交互对应的 Turn ID（若为澄清回答则复用 source_turn_id）。
+        turn_id: 本轮交互对应的 Turn ID（若为澄清回答则复用其关联的源 Turn）。
         plan_id: 生成或关联的 Plan 唯一标识。
         status: 当前处理状态（processing / unsupported / needs_clarification / retry_pending / completed / failed）。
         assistant_message: 当处于 needs_clarification、unsupported 或 failed 时的即时助手回复或错误信息。
@@ -69,6 +69,8 @@ class SendConversationMessageResult(BaseModel):
     ]
     assistant_message: str | None = None
     task_ids: list[str] = Field(default_factory=list)
+    clarification_id: str | None = None
+    clarification_round: int | None = None
     context_selection: ContextSelectionMetadata | None = None
 
 
@@ -94,3 +96,9 @@ class TurnStatusResult(BaseModel):
     revision: int | None
     task_ids: list[str]
     assistant_message: str | None
+    failure_code: str | None = None
+    failure_reason: str | None = None
+    next_action: str | None = None
+    tasks: list[dict] = Field(default_factory=list)
+    message_failures: list[dict] = Field(default_factory=list)
+    clarifications: list[dict] = Field(default_factory=list)

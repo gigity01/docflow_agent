@@ -12,6 +12,8 @@
 
 from __future__ import annotations
 
+from app.shared.time import utc_now
+
 import asyncio
 import threading
 import unittest
@@ -356,7 +358,7 @@ class TaskRuntimeTest(unittest.IsolatedAsyncioTestCase):
         )
         with self.session_factory() as session:
             task = session.get(Task, "task-1")
-            task.started_at = datetime.now() - timedelta(seconds=301)
+            task.started_at = utc_now() - timedelta(seconds=301)
             session.commit()
 
         result = await self.runtime.execute_next("plan-runtime")
@@ -678,7 +680,7 @@ class TaskRuntimeTest(unittest.IsolatedAsyncioTestCase):
         )
         with self.session_factory() as session:
             task = session.get(Task, "task-1")
-            task.started_at = datetime.now() - timedelta(seconds=301)
+            task.started_at = utc_now() - timedelta(seconds=301)
             session.commit()
         self.compensator.error = RuntimeError("compensation failed")
 
@@ -704,7 +706,7 @@ class TaskRuntimeTest(unittest.IsolatedAsyncioTestCase):
             )
             self.assertGreaterEqual(
                 retry_event.available_at,
-                datetime.now() + timedelta(seconds=4),
+                utc_now() + timedelta(seconds=4),
             )
 
     async def test_compensation_retry_uses_exponential_backoff_with_cap(self) -> None:
@@ -719,7 +721,7 @@ class TaskRuntimeTest(unittest.IsolatedAsyncioTestCase):
 
         retry_event = None
         for failed_attempt in range(1, 5):
-            before = datetime.now()
+            before = utc_now()
             kwargs = {}
             if retry_event is not None:
                 kwargs = {
@@ -764,7 +766,7 @@ class TaskRuntimeTest(unittest.IsolatedAsyncioTestCase):
                 )
                 self.assertLessEqual(
                     retry_event.available_at,
-                    datetime.now() + timedelta(seconds=expected_delay + 1),
+                    utc_now() + timedelta(seconds=expected_delay + 1),
                 )
 
     async def test_compensation_is_locked_after_attempt_limit(self) -> None:

@@ -7,13 +7,14 @@
    - 规划判定能力不支持时，立即调用 context_service.complete_turn 完成当前 Turn，回写助手回答并保留已有链归属。
 3. 澄清请求（PlanStatus.NEEDS_CLARIFICATION）：
    - 规划产生澄清请求时，返回 status="needs_clarification" 与澄清问题，保持当前源 Turn 为 open 状态（不调用 complete_turn）。
-4. 澄清回答（source_turn_id 回复）：
-   - 当用户提交澄清回答时，复用原有 source_turn_id，不重复运行 Context 路由，直接写入澄清输入并触发 Replan，返回 retry_pending。
+4. 澄清回答（clarification_id 回复）：
+   - 当用户提交澄清回答时，复用原有 clarification_id，不重复运行 Context 路由，直接写入澄清输入并触发 Replan，返回 retry_pending。
 """
 
 from __future__ import annotations
 
 import unittest
+from types import SimpleNamespace
 from unittest import mock
 
 from app.modules.context.application.dto import ContextSelectionResult
@@ -133,14 +134,14 @@ class ConversationOrchestrationTest(unittest.IsolatedAsyncioTestCase):
     async def test_clarification_answer_reuses_source_turn_and_queues_replan(
         self,
     ) -> None:
-        """验证用户回复澄清答案时复用 source_turn_id，直接调用 AnswerClarification 并触发 Replan 流程。"""
-        self.answer.execute.return_value = "plan-question"
+        """验证用户回复澄清答案时复用 clarification_id，直接调用 AnswerClarification 并触发 Replan 流程。"""
+        self.answer.execute.return_value = SimpleNamespace(plan_id="plan-question", turn_id="turn-question")
 
         result = await self.use_case.execute(
             SendConversationMessageCommand(
                 conversation_id="conversation-1",
                 message="文档 7",
-                source_turn_id="turn-question",
+                clarification_id="turn-question",
             )
         )
 
@@ -151,7 +152,7 @@ class ConversationOrchestrationTest(unittest.IsolatedAsyncioTestCase):
         self.planning.execute.assert_not_awaited()
         self.answer.execute.assert_called_once_with(
             conversation_id="conversation-1",
-            source_turn_id="turn-question",
+            clarification_id="turn-question",
             answer="文档 7",
         )
 

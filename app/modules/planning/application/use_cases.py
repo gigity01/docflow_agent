@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from uuid import uuid4
+from app.shared.time import utc_now
+from app.modules.planning.application.recovery_policy import MAX_CLARIFICATION_ROUNDS, add_planner_watchdog
 
 from app.modules.clarification.domain.enums import ClarificationStatus
 from app.modules.context.domain.enums import ContextTurnStatus
@@ -68,7 +70,7 @@ def _new_outbox_event(
         payload_json=payload,
         status=OutboxEventStatus.PENDING.value,
         attempts=0,
-        available_at=datetime.now(),
+        available_at=utc_now(),
         published_at=None,
     )
 
@@ -151,7 +153,7 @@ class CreatePlanUseCase:
                     command.revision,
                 )
             )
-            if existing is not None:
+            if existing is not None or uow.plans.get_by_turn_and_revision(command.turn_id, command.revision) is not None:
                 raise PlanningApplicationError(
                     409,
                     "该 Turn 的 Plan revision 已存在",
@@ -171,6 +173,7 @@ class CreatePlanUseCase:
                     failure_reason=None,
                 )
             )
+            add_planner_watchdog(uow, self._ports, plan, turn.conversation_id)
             uow.commit()
             return PlanResult.model_validate(plan)
 
@@ -586,7 +589,7 @@ class _MarkPlanUseCase:
                 )
                 if clarification is not None:
                     clarification.status = ClarificationStatus.EXPIRED.value
-                    clarification.resolved_at = datetime.now()
+                    clarification.resolved_at = utc_now()
                 turn = uow.conversation_turns.get_by_id_for_update(
                     plan.turn_id
                 )
@@ -681,17 +684,18 @@ class MarkPlanNeedsClarificationUseCase:
                     "Conversation Turn 当前状态不允许标记需要澄清",
                     result_code="turn_state_conflict",
                 )
-            if (
-                uow.clarifications.get_by_source_turn_id_for_update(
-                    plan.turn_id
-                )
-                is not None
-            ):
-                raise PlanningApplicationError(
-                    409,
-                    "Conversation Turn 已存在 ClarificationRequest",
-                    result_code="clarification_conflict",
-                )
+            previous = uow.clarifications.get_by_source_turn_id_for_update(plan.turn_id)
+            if previous is not None and previous.status == ClarificationStatus.OPEN.value:
+                raise PlanningApplicationError(409, "仍有待回答的澄清请求", result_code="clarification_conflict")
+            next_round = 1 if previous is None else previous.round + 1
+            if next_round > MAX_CLARIFICATION_ROUNDS:
+                reason = "澄清次数已达上限，仍缺少：" + "、".join(command.required_information)
+                uow.plans.set_status(plan, status=PlanStatus.FAILED.value,
+                    failure_code="clarification_limit_exceeded", failure_reason=reason)
+                uow.conversation_turns.set_status(turn, ContextTurnStatus.FAILED.value)
+                turn.assistant_content = reason
+                uow.commit()
+                return PlanResult.model_validate(plan)
             # 更新 Plan 与 Turn 状态
             uow.plans.set_status(
                 plan,
@@ -711,6 +715,7 @@ class MarkPlanNeedsClarificationUseCase:
                     source_turn_id=plan.turn_id,
                     source_plan_id=plan.plan_id,
                     kind=command.kind,
+                    round=next_round,
                     reason=command.reason,
                     question=None,
                     required_information_json=list(

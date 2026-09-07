@@ -12,10 +12,12 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.config.settings import SQLALCHEMY_DATABASE_URL
 from app.infrastructure.database.base import Base
+from app.infrastructure.database.connection import connection_options
 
 # 初始化全局 SQLAlchemy 数据库引擎
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
+    connect_args=connection_options(SQLALCHEMY_DATABASE_URL),
     pool_size=10,
     pool_pre_ping=True,
     pool_recycle=3600,

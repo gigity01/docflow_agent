@@ -728,7 +728,7 @@ class RuntimeWorkerEndToEndTest(unittest.IsolatedAsyncioTestCase):
         with self.session_factory() as session:
             initial_plan = session.get(Plan, body["plan_id"])
             initial_task = session.get(Task, body["task_ids"][0])
-            initial_outbox = session.query(OutboxEvent).one()
+            initial_outbox = session.query(OutboxEvent).filter(OutboxEvent.event_type == "runtime.plan_wakeup").one()
             self.assertEqual(initial_plan.status, "ready")
             self.assertEqual(initial_task.status, "pending")
             self.assertEqual(initial_outbox.status, "pending")

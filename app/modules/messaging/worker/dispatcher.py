@@ -8,11 +8,13 @@
 
 from __future__ import annotations
 
+from app.shared.time import utc_now
+
 import asyncio
 from datetime import datetime
 from uuid import uuid4
 
-from app.modules.messaging.application.dto import RuntimeEvent
+from app.modules.messaging.application.dto import RuntimeEvent, DeferredEvent
 from app.modules.messaging.domain.enums import RuntimeEventType
 from app.modules.planning.application.replan import ReplanRequested
 
@@ -75,12 +77,15 @@ class RuntimeEventDispatcher:
 
         # 2. Plan 唤醒与下一任务执行事件：驱动 TaskRuntime 领取执行就绪 Task 或进行补偿
         if event.event_type == RuntimeEventType.PLAN_WAKEUP.value:
-            return await self._runtime.execute_next(
+            result = await self._runtime.execute_next(
                 event.payload["plan_id"],
                 event_id=event.event_id,
                 compensation_execution_id=event.payload.get("execution_id"),
                 compensation_operation_id=event.payload.get("operation_id"),
             )
+            if result.outcome == "already_running" and result.defer_until is not None:
+                raise DeferredEvent(result.defer_until)
+            return result
 
         # 3. 聚合请求事件（需通过 Inbox 模式进行幂等去重校验）
         if await asyncio.to_thread(self._already_processed, event.event_id):
@@ -122,7 +127,7 @@ class RuntimeEventDispatcher:
                     inbox_id=f"inbox_{uuid4().hex}",
                     consumer_name=self.CONSUMER_NAME,
                     event_id=event_id,
-                    processed_at=datetime.now(),
+                    processed_at=utc_now(),
                 )
             )
             uow.commit()

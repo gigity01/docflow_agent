@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 class DatabaseBootstrapTest(unittest.TestCase):
     def test_empty_database_seed_revision_and_existing_database_refusal(self):
         with tempfile.TemporaryDirectory() as directory:
-            url = "sqlite:///" + (Path(directory) / "bootstrap.db").as_posix()
+            url = "sqlite:///" + (Path(directory) / "bootstrap%40%23%25.db").as_posix()
             env = {**os.environ, "SQLALCHEMY_DATABASE_URL": url,
                    "DASHSCOPE_API_KEY": "bootstrap-test-placeholder", "PYTHONUTF8": "1"}
             # 仅在子进程测试中适配 MySQL 类型；生产初始化仍以 MySQL 为目标。

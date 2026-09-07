@@ -4,6 +4,19 @@
 """
 
 from dataclasses import dataclass
+from datetime import datetime
+
+
+class DeferredEvent(Exception):
+    """当前执行租约尚有效；保留消息，到指定时间再检查，不计失败。"""
+
+    def __init__(self, available_at: datetime) -> None:
+        super().__init__("已有执行租约，等待恢复检查")
+        self.available_at = available_at
+
+
+class InvalidRuntimeEvent(ValueError):
+    """消息格式或事件类型无法执行，必须隔离。"""
 
 
 @dataclass(frozen=True)

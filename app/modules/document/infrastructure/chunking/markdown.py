@@ -7,7 +7,7 @@
 4. 子块 embedding_text 拼接章节路径（'标题路径：...\\n正文：...'），以丰富检索语义。
 """
 
-import re
+from app.modules.document.infrastructure.markdown_structure import extract_sections
 
 from app.modules.document.infrastructure.chunking.base import (
     BaseChunker,
@@ -21,10 +21,6 @@ from app.modules.document.infrastructure.chunking.common import (
     split_text_to_child_chunks,
     build_embedding_text,
 )
-
-# Markdown ATX 标题正则（匹配 1 到 6 级 # 标题）
-HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
-
 
 class MarkdownChunker(BaseChunker):
     """Markdown 格式文档切块策略实现类。
@@ -138,61 +134,5 @@ class MarkdownChunker(BaseChunker):
         ).strip()
 
     def _parse_sections(self, lines: list[str]) -> list[dict]:
-        """在缺失 Processor 预处理元信息时，依据 ATX 标题重新解析 Markdown 章节树。
-
-        Args:
-            lines: 文本行列表。
-
-        Returns:
-            章节元数据字典列表（包含 level, title, section_path, start_line, end_line 等）。
-        """
-        if not lines:
-            return []
-
-        heading_stack: list[tuple[int, str]] = []
-        sections: list[dict] = []
-        current_section: dict | None = None
-
-        for line_number, line in enumerate(lines, start=1):
-            match = HEADING_PATTERN.match(line)
-
-            if match:
-                if current_section is not None:
-                    current_section["end_line"] = line_number - 1
-                    sections.append(current_section)
-
-                level = len(match.group(1))
-                title = match.group(2).strip()
-
-                # 维护祖先标题栈：同级或更高层级出现时，弹出栈顶
-                while heading_stack and heading_stack[-1][0] >= level:
-                    heading_stack.pop()
-
-                heading_stack.append((level, title))
-
-                current_section = {
-                    "level": level,
-                    "title": title,
-                    "section_path": [item[1] for item in heading_stack],
-                    "heading_line": line_number,
-                    "start_line": line_number,
-                    "end_line": line_number,
-                }
-                continue
-
-            # 处理未在任何标题下的前置正文
-            if current_section is None and line.strip():
-                current_section = {
-                    "level": None,
-                    "title": None,
-                    "section_path": [],
-                    "heading_line": None,
-                    "start_line": line_number,
-                    "end_line": line_number,
-                }
-
-        if current_section is not None:
-            current_section["end_line"] = len(lines)
-            sections.append(current_section)
-
-        return sections
+        """缺少处理元信息时复用同一套围栏和标题规则。"""
+        return extract_sections(lines)

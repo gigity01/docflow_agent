@@ -48,6 +48,7 @@ class OutboxEvent(Base):
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     available_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    origin_event_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now()
     )
@@ -79,4 +80,14 @@ class InboxEvent(Base):
     inbox_id: Mapped[str] = mapped_column(String(100), primary_key=True)
     consumer_name: Mapped[str] = mapped_column(String(100), nullable=False)
     event_id: Mapped[str] = mapped_column(String(100), nullable=False)
-    processed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # 业务 Inbox 默认仍表示处理完成；runtime.delivery 独立记录传输恢复状态。
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="processed", server_default="processed")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    available_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    event_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    payload_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    plan_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    recovery_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")

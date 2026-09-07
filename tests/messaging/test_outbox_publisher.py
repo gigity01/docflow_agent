@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from app.shared.time import utc_now
+
 import unittest
 from datetime import datetime
 
@@ -57,7 +59,7 @@ class OutboxPublisherTest(unittest.IsolatedAsyncioTestCase):
                     payload_json={"plan_id": "plan-1"},
                     status="pending",
                     attempts=0,
-                    available_at=datetime.now(),
+                    available_at=utc_now(),
                 )
             )
             session.commit()

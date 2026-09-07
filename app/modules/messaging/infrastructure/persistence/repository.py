@@ -90,6 +90,12 @@ class OutboxRepository:
             .first()
         )
 
+    def list_failed(self, *, plan_id: str | None = None, limit: int = 50, offset: int = 0) -> list[OutboxEvent]:
+        query = self.db.query(OutboxEvent).filter(OutboxEvent.status == "dead_letter")
+        if plan_id is not None:
+            query = query.filter(OutboxEvent.aggregate_id == plan_id)
+        return query.order_by(OutboxEvent.created_at, OutboxEvent.event_id).offset(offset).limit(limit).all()
+
 
 class InboxRepository:
     """收件箱事件数据库仓储。
@@ -137,3 +143,22 @@ class InboxRepository:
         self.db.add(event)
         self.db.flush()
         return event
+
+    def get_for_update(self, consumer_name: str, event_id: str) -> InboxEvent | None:
+        return (self.db.query(InboxEvent)
+                .filter(InboxEvent.consumer_name == consumer_name, InboxEvent.event_id == event_id)
+                .with_for_update().first())
+
+    def get_failure_for_update(self, inbox_id: str) -> InboxEvent | None:
+        return (self.db.query(InboxEvent)
+                .filter(InboxEvent.inbox_id == inbox_id, InboxEvent.consumer_name == "runtime.delivery")
+                .with_for_update().first())
+
+    def list_delivery_failures(self, *, plan_id: str | None = None, limit: int = 50, offset: int = 0) -> list[InboxEvent]:
+        query = self.db.query(InboxEvent).filter(
+            InboxEvent.consumer_name == "runtime.delivery",
+            InboxEvent.status.in_(("retry_pending", "dead_letter")),
+        )
+        if plan_id is not None:
+            query = query.filter(InboxEvent.plan_id == plan_id)
+        return query.order_by(InboxEvent.inbox_id).offset(offset).limit(limit).all()

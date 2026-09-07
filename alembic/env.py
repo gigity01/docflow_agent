@@ -16,6 +16,7 @@ from alembic import context
 
 from app.config.settings import SQLALCHEMY_DATABASE_URL
 from app.infrastructure.database.base import Base
+from app.infrastructure.database.connection import connection_options
 from app.infrastructure.database.model_registry import load_all_models
 
 
@@ -24,7 +25,7 @@ load_all_models()
 
 # Alembic 配置对象来自 alembic.ini；运行时 URL 由应用统一配置覆盖，避免迁移与服务连接到不同数据库
 config = context.config
-config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL.replace("%", "%%"))
 
 # 仅在存在 ini 配置文件时初始化 Alembic 自身日志格式
 if config.config_file_name is not None:
@@ -67,6 +68,7 @@ def run_migrations_online() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=connection_options(SQLALCHEMY_DATABASE_URL),
     )
 
     with connectable.connect() as connection:

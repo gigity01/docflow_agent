@@ -4,6 +4,7 @@
 """
 
 from typing import Any, Literal
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -62,6 +63,7 @@ class ClaimNextTaskResult(BaseModel):
         "terminal",
     ] = Field(description="Claim 结果分类")
     task: TaskSnapshot | None = Field(default=None, description="新领取的任务快照（当 outcome=claimed 时有效）")
+    defer_until: datetime | None = None
     recovery: RecoverySnapshot | None = Field(
         default=None,
         description="待补偿恢复的任务快照（当 outcome=compensation_required 或 compensation_locked 时有效）",
@@ -98,6 +100,7 @@ class ExecutePlanResult(BaseModel):
     """执行单个 Plan 驱动步进（execute_next）后的最终结果。"""
 
     plan_id: str = Field(description="所属 Plan ID")
+    defer_until: datetime | None = None
     outcome: Literal[
         "task_succeeded",
         "compensation_retry_scheduled",

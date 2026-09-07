@@ -221,6 +221,8 @@ from app.modules.task_runtime.infrastructure.compensators import (
     ProcessDocumentOperationCompensator,
 )
 from app.modules.messaging.application.outbox import OutboxPublisher
+from app.modules.messaging.application.delivery import MessageDeliveryService
+from app.modules.task_runtime.application.recover_plan import RecoverPlanUseCase
 from app.modules.messaging.infrastructure.redis_streams import (
     RedisStreamPublisher,
 )
@@ -669,6 +671,10 @@ async def build_container() -> AppContainer:
             aggregate_plan=aggregate_plan,
         )
         return AppContainer(
+            message_delivery=MessageDeliveryService(uow_factory=SQLAlchemyUnitOfWork,
+                inbox_factory=InboxEvent, outbox_factory=OutboxEvent),
+            recover_plan=RecoverPlanUseCase(uow_factory=SQLAlchemyUnitOfWork,
+                outbox_factory=OutboxEvent, capabilities=build_capability_registry()),
             redis_client=redis_client,
             deepseek_provider=deepseek_provider,
             context_agent_router=agent_router,

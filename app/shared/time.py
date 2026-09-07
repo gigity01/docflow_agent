@@ -24,3 +24,8 @@ def now_utc_iso() -> str:
         str: 如 `2026-08-25T10:00:00.000000+00:00` 的时间字符串。
     """
     return datetime.now(timezone.utc).isoformat()
+
+
+def utc_now() -> datetime:
+    """数据库 DATETIME 统一保存无时区的 UTC，跨进程比较使用同一基准。"""
+    return datetime.now(timezone.utc).replace(tzinfo=None)

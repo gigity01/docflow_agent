@@ -176,7 +176,7 @@ class PlanningUseCasesTest(unittest.TestCase):
             )
             stored_turn = session.get(ConversationTurn, "turn-1")
             dependencies = session.query(TaskDependency).all()
-            outbox = session.query(OutboxEvent).one()
+            outbox = session.query(OutboxEvent).filter(OutboxEvent.event_type == "runtime.plan_wakeup").one()
             self.assertEqual(stored_plan.status, "ready")
             self.assertEqual(
                 [task.status for task in stored_tasks],

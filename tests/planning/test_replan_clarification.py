@@ -151,17 +151,17 @@ class ReplanClarificationTest(unittest.IsolatedAsyncioTestCase):
         )
         source_plan_id = answer.execute(
             conversation_id="conversation-1",
-            source_turn_id="turn-question",
+            clarification_id="clarification-1",
             answer="文档 7",
         )
-        self.assertEqual(source_plan_id, "plan-question")
+        self.assertEqual(source_plan_id.plan_id, "plan-question")
         with self.session_factory() as session:
             event = session.query(OutboxEvent).one()
             request = session.get(ClarificationRequest, "clarification-1")
             source_turn = session.get(ConversationTurn, "turn-question")
             self.assertEqual(request.status, "answered")
             self.assertEqual(request.answer_turn_id, "turn-question")
-            self.assertEqual(source_turn.clarification_input, "文档 7")
+            self.assertIn("文档 7", source_turn.clarification_input)
             self.assertEqual(source_turn.status, "processing")
 
         runner = _RunPlanning()
@@ -198,14 +198,14 @@ class ReplanClarificationTest(unittest.IsolatedAsyncioTestCase):
         )
         answer.execute(
             conversation_id="conversation-1",
-            source_turn_id="turn-question",
+            clarification_id="clarification-1",
             answer="文档 7",
         )
 
         with self.assertRaises(ClarificationApplicationError) as raised:
             answer.execute(
                 conversation_id="conversation-1",
-                source_turn_id="turn-question",
+                clarification_id="clarification-1",
                 answer="文档 8",
             )
         self.assertEqual(raised.exception.status_code, 409)
@@ -226,7 +226,7 @@ class ReplanClarificationTest(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ClarificationApplicationError) as raised:
             answer.execute(
                 conversation_id="conversation-1",
-                source_turn_id="turn-question",
+                clarification_id="clarification-1",
                 answer="   ",
             )
         self.assertEqual(raised.exception.status_code, 400)
@@ -245,7 +245,7 @@ class ReplanClarificationTest(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ClarificationApplicationError) as raised:
             answer.execute(
                 conversation_id="conversation-1",
-                source_turn_id="turn-missing",
+                clarification_id="missing",
                 answer="文档 7",
             )
         self.assertEqual(raised.exception.status_code, 404)
@@ -259,7 +259,7 @@ class ReplanClarificationTest(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ClarificationApplicationError) as raised:
             answer.execute(
                 conversation_id="conversation-other",
-                source_turn_id="turn-question",
+                clarification_id="clarification-1",
                 answer="文档 7",
             )
         self.assertEqual(raised.exception.status_code, 404)

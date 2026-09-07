@@ -97,6 +97,8 @@ from app.modules.conversation.application.send_message import (
     SendConversationMessageUseCase,
 )
 from app.modules.messaging.application.outbox import OutboxPublisher
+from app.modules.messaging.application.delivery import MessageDeliveryService
+from app.modules.task_runtime.application.recover_plan import RecoverPlanUseCase
 from app.modules.messaging.worker.dispatcher import RuntimeEventDispatcher
 from app.modules.planning.application.replan import ReplanUseCase
 from app.modules.task_runtime.application.runtime import TaskRuntimeService
@@ -182,6 +184,8 @@ class AppContainer:
     list_child_chunks: ListChildChunksUseCase
     get_document_chunk_statistics: GetDocumentChunkStatisticsUseCase
     get_knowledge_base_statistics: GetKnowledgeBaseStatisticsUseCase
+    message_delivery: MessageDeliveryService | None = None
+    recover_plan: RecoverPlanUseCase | None = None
 
     async def aclose(self) -> None:
         """按依赖倒序安全关闭外部客户端与底层连接池。"""
