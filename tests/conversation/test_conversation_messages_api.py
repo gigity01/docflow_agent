@@ -9,7 +9,7 @@
    - 依赖缺失（如 LLM Router 服务未配置）返回 HTTP 503 Service Unavailable。
    - 上游路由失败（ContextRoutingError）安全映射为 HTTP 502 Bad Gateway。
 3. 澄清回答交互：
-   - 携带 `source_turn_id` 时复用源轮次，澄清相关业务错误分别映射为 HTTP 400（空回答）、404（不存在）、409（状态冲突）。
+   - 携带 `clarification_id` 时复用源轮次，澄清相关业务错误分别映射为 HTTP 400（空回答）、404（不存在）、409（状态冲突）。
 """
 
 from __future__ import annotations
@@ -98,6 +98,8 @@ class ConversationMessagesApiTest(unittest.IsolatedAsyncioTestCase):
                 "status": "processing",
                 "assistant_message": None,
                 "task_ids": ["task-1"],
+                "clarification_id": None,
+                "clarification_round": None,
                 "context_selection": {
                     "selection_mode": "no_context",
                     "relevant_chain_ids": [],
@@ -113,7 +115,7 @@ class ConversationMessagesApiTest(unittest.IsolatedAsyncioTestCase):
             SendConversationMessageCommand(
                 conversation_id="conv_test_001",
                 message="继续完善之前的文档处理日志方案",
-                source_turn_id=None,
+                clarification_id=None,
             )
         )
 
@@ -184,8 +186,8 @@ class ConversationMessagesApiTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 422)
 
-    async def test_request_schema_exposes_optional_source_turn_id(self) -> None:
-        """验证 OpenAPI Schema 正确暴露了可选的 source_turn_id 澄清字段。"""
+    async def test_request_schema_exposes_optional_clarification_id(self) -> None:
+        """验证 OpenAPI Schema 正确暴露了可选的 clarification_id 澄清字段。"""
         schema = self.app.openapi()
         request_schema = schema["components"]["schemas"][
             "SendMessageRequest"
@@ -193,14 +195,14 @@ class ConversationMessagesApiTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             set(request_schema["properties"]),
-            {"message", "source_turn_id"},
+            {"message", "clarification_id"},
         )
         self.assertEqual(request_schema["required"], ["message"])
 
-    async def test_source_turn_id_is_adapted_for_clarification_answer(
+    async def test_clarification_id_is_adapted_for_clarification_answer(
         self,
     ) -> None:
-        """验证携带 source_turn_id 时正确适配并触发澄清回答流程，返回 202 retry_pending。"""
+        """验证携带 clarification_id 时正确适配并触发澄清回答流程，返回 202 retry_pending。"""
         self.use_case.execute.return_value = SendConversationMessageResult(
             conversation_id="conv_test_001",
             turn_id="turn-question",
@@ -212,7 +214,7 @@ class ConversationMessagesApiTest(unittest.IsolatedAsyncioTestCase):
             "/api/conversations/conv_test_001/messages",
             json={
                 "message": "文档 7",
-                "source_turn_id": "turn-question",
+                "clarification_id": "turn-question",
             },
         )
 
@@ -221,7 +223,7 @@ class ConversationMessagesApiTest(unittest.IsolatedAsyncioTestCase):
             SendConversationMessageCommand(
                 conversation_id="conv_test_001",
                 message="文档 7",
-                source_turn_id="turn-question",
+                clarification_id="turn-question",
             )
         )
 
@@ -242,7 +244,7 @@ class ConversationMessagesApiTest(unittest.IsolatedAsyncioTestCase):
                     "/api/conversations/conv_test_001/messages",
                     json={
                         "message": "文档 7",
-                        "source_turn_id": "turn-question",
+                        "clarification_id": "turn-question",
                     },
                 )
 

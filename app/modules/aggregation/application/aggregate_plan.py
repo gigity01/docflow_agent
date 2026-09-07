@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.shared.time import utc_now
+
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
@@ -216,23 +218,13 @@ class AggregatePlanUseCase:
         )
 
     def _resolve_clarification(self, plan_id: str) -> None:
-        """若当前 Plan 来源于澄清回答的重规划，则将对应的 ClarificationRequest 状态推进为 resolved。
-
-        根据架构规范，ClarificationRequest 在用户回答后处于 answered 状态，
-        只有在基于该回答生成的新 Plan 全部成功聚合后，才原子推进为 resolved。
-
-        Args:
-            plan_id: 当前成功聚合的 Plan 标识。
-        """
+        """完成后将本 Turn 所有已回答的澄清记录闭合。"""
         with self._uow_factory() as uow:
             plan = uow.plans.get_by_id(plan_id)
-            if plan is None or plan.parent_plan_id is None:
+            if plan is None:
                 return
-            request = uow.clarifications.get_by_plan_id_for_update(
-                plan.parent_plan_id
-            )
-            if request is None or request.status != "answered":
-                return
-            request.status = "resolved"
-            request.resolved_at = datetime.now()
+            for request in uow.clarifications.list_by_turn(plan.turn_id):
+                if request.status == "answered":
+                    request.status = "resolved"
+                    request.resolved_at = utc_now()
             uow.commit()

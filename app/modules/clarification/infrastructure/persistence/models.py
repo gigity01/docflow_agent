@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, JSON, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, JSON, String, Text
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -17,12 +17,12 @@ class ClarificationRequest(Base):
     """ClarificationRequest 持久化实体。
 
     记录一次跨 Turn 的用户澄清请求。当 Planner 在规划阶段发现信息缺口、歧义或多重解释时创建。
-    同一 source_turn_id 最多只能存在一个 ClarificationRequest。
+    同一 Turn 可以多轮澄清，每轮单独保留问题和答案。
 
     Attributes:
         clarification_id: 澄清请求主键 ID。
         conversation_id: 所属会话 ID。
-        source_turn_id: 发起澄清提问的源 Turn 标识（唯一约束）。
+        source_turn_id: 发起澄清提问的源 Turn 标识，与 round 联合唯一。
         source_plan_id: 发起澄清的源 Plan 标识（唯一约束）。
         kind: 澄清类型（如 ambiguous_target, missing_parameter, conflicting_intent）。
         reason: 发起澄清的技术原因说明。
@@ -42,8 +42,8 @@ class ClarificationRequest(Base):
             name="uq_clarification_requests_source_plan",
         ),
         UniqueConstraint(
-            "source_turn_id",
-            name="uq_clarification_requests_source_turn",
+            "source_turn_id", "round",
+            name="uq_clarification_requests_turn_round",
         ),
     )
 
@@ -57,6 +57,8 @@ class ClarificationRequest(Base):
         String(100), ForeignKey("plans.plan_id"), nullable=False
     )
     kind: Mapped[str] = mapped_column(String(30), nullable=False)
+    round: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    answer_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     question: Mapped[str | None] = mapped_column(Text, nullable=True)
     required_information_json: Mapped[list] = mapped_column(JSON, nullable=False)

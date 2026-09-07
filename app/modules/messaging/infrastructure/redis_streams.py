@@ -7,7 +7,14 @@
   在业务处理成功后显式调用 XACK 进行确认；消费失败时消息保持 pending 状态以支持后续重试或由其它 Worker 实例接管。
 """
 
+import asyncio
 import json
+import logging
+
+from app.modules.messaging.application.dto import DeferredEvent, InvalidRuntimeEvent
+from app.modules.messaging.domain.enums import RuntimeEventType
+
+LOGGER = logging.getLogger(__name__)
 
 from redis.exceptions import ResponseError
 
@@ -74,6 +81,7 @@ class RedisStreamWorker:
         group_name: str = "agent-runtime-workers",
         consumer_name: str,
         claim_min_idle_milliseconds: int = 60_000,
+        delivery=None,
     ) -> None:
         """初始化 Redis Streams 消费 Worker。
 
@@ -86,6 +94,9 @@ class RedisStreamWorker:
             claim_min_idle_milliseconds: 自动认领超时挂起消息的最小空闲毫秒数（默认 60 秒）。
         """
         self._redis = redis_client
+        self._delivery = delivery
+        self._pending_cursor = "0"
+        self._claim_cursor = "0-0"
         self._dispatcher = dispatcher
         self._stream_name = stream_name
         self._group_name = group_name
@@ -130,22 +141,13 @@ class RedisStreamWorker:
         """
         await self.ensure_group()
 
-        # 阶段 1: 认领并处理超时挂起消息
         handled = await self._claim_and_dispatch(count=count)
-        if handled:
-            return handled
-
-        # 阶段 2: 处理当前消费者未 ACK 的历史积压消息
-        handled = await self._read_and_dispatch(stream_id="0", count=count)
-        if handled:
-            return handled
-
-        # 阶段 3: 阻塞拉取全新到达的消息
-        return await self._read_and_dispatch(
-            stream_id=">",
-            count=count,
-            block_milliseconds=block_milliseconds,
+        handled += await self._read_and_dispatch(stream_id=self._pending_cursor, count=count)
+        # 每轮都给新消息机会，延迟中的 PEL 消息不会挡住后面的工作。
+        handled += await self._read_and_dispatch(
+            stream_id=">", count=count, block_milliseconds=None if handled else block_milliseconds,
         )
+        return handled
 
     async def _claim_and_dispatch(self, *, count: int) -> int:
         """自动认领其他 Consumer 空闲超时的 pending 消息并分派处理。
@@ -161,9 +163,10 @@ class RedisStreamWorker:
             self._group_name,
             self._consumer_name,
             self._claim_min_idle_milliseconds,
-            start_id="0-0",
+            start_id=self._claim_cursor,
             count=count,
         )
+        self._claim_cursor = claimed[0] if claimed else "0-0"
         messages = claimed[1] if len(claimed) > 1 else []
         return await self._dispatch_messages(messages)
 
@@ -192,7 +195,11 @@ class RedisStreamWorker:
             block=block_milliseconds,
         )
         handled = 0
+        if stream_id != ">":
+            self._pending_cursor = "0"
         for _, messages in streams:
+            if stream_id != ">" and messages:
+                self._pending_cursor = messages[-1][0]
             handled += await self._dispatch_messages(messages)
         return handled
 
@@ -209,36 +216,61 @@ class RedisStreamWorker:
         """
         handled = 0
         for message_id, fields in messages:
-            event = self._parse_event(fields)
-            # 业务分派处理：失败抛出异常直接中断并保持 pending
-            await self._dispatcher.handle(event)
-            # 业务成功后显式确认消息
-            await self._redis.xack(
-                self._stream_name,
-                self._group_name,
-                message_id,
-            )
-            handled += 1
+            event = None
+            try:
+                try:
+                    event = self._parse_event(fields)
+                    disposition = (await asyncio.to_thread(self._delivery.before, event.event_id)
+                                   if self._delivery else "execute")
+                    if disposition == "wait":
+                        continue
+                    if disposition == "execute":
+                        await self._dispatcher.handle(event)
+                        if self._delivery:
+                            await asyncio.to_thread(self._delivery.completed, event)
+                except DeferredEvent as deferred:
+                    if not self._delivery:
+                        raise
+                    await asyncio.to_thread(self._delivery.defer, event, deferred.available_at)
+                    continue
+                except Exception as exc:
+                    if not self._delivery:
+                        raise
+                    should_ack = await asyncio.to_thread(
+                        self._delivery.failed, event, f"{self._stream_name}:{message_id}", fields,
+                        error_name=type(exc).__name__,
+                    )
+                    if not should_ack:
+                        continue
+                await self._redis.xack(self._stream_name, self._group_name, message_id)
+                handled += 1
+            except Exception:
+                if not self._delivery:
+                    raise
+                # 落库或 ACK 失败时保留原消息，继续同批其他消息。
+                LOGGER.exception("消息记录或确认失败；保留 pending")
         return handled
 
     @staticmethod
     def _parse_event(fields: dict) -> RuntimeEvent:
-        """解析 Redis Stream 字典字段为 RuntimeEvent 数据对象。
-
-        Args:
-            fields: Stream 消息中的键值对字典。
-
-        Returns:
-            RuntimeEvent: 解析后的运行时事件对象。
-
-        Raises:
-            ValueError: 当 payload 字段不是有效的 JSON Object 时抛出。
-        """
-        payload = json.loads(fields["payload"])
-        if not isinstance(payload, dict):
-            raise ValueError("Runtime Event payload 必须是 JSON Object")
-        return RuntimeEvent(
-            event_id=fields["event_id"],
-            event_type=fields["event_type"],
-            payload=payload,
-        )
+        try:
+            event_id, event_type = fields["event_id"], fields["event_type"]
+            payload = json.loads(fields["payload"])
+            if not isinstance(event_id, str) or not 1 <= len(event_id) <= 100:
+                raise ValueError("invalid event id")
+            if event_type not in {kind.value for kind in RuntimeEventType}:
+                raise ValueError("unknown event type")
+            if not isinstance(payload, dict):
+                raise ValueError("payload must be an object")
+            key = "previous_plan_id" if event_type == RuntimeEventType.REPLAN_REQUESTED.value else "plan_id"
+            if not isinstance(payload.get(key), str) or not 1 <= len(payload[key]) <= 100:
+                raise ValueError("invalid plan id")
+            if event_type == RuntimeEventType.REPLAN_REQUESTED.value:
+                for name in ("workflow_id", "conversation_id", "root_turn_id", "trigger_type"):
+                    if not isinstance(payload.get(name), str) or not 1 <= len(payload[name]) <= 100:
+                        raise ValueError("invalid replan field")
+                if type(payload.get("next_revision")) is not int or payload["next_revision"] < 2:
+                    raise ValueError("invalid replan revision")
+            return RuntimeEvent(event_id=event_id, event_type=event_type, payload=payload)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise InvalidRuntimeEvent("Runtime Event 格式不合法") from exc

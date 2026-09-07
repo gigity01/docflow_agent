@@ -510,4 +510,6 @@ class RunPlanningUseCase:
                     if clarification is not None
                     else None
                 ),
+                clarification_id=clarification.clarification_id if clarification is not None else None,
+                clarification_round=clarification.round if clarification is not None else None,
             )

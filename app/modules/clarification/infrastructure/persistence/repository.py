@@ -74,9 +74,20 @@ class ClarificationRepository:
         return (
             self.db.query(ClarificationRequest)
             .filter(ClarificationRequest.source_turn_id == source_turn_id)
+            .order_by(ClarificationRequest.round.desc())
             .with_for_update()
             .first()
         )
+
+    def get_by_id_for_update(self, clarification_id: str) -> ClarificationRequest | None:
+        return (self.db.query(ClarificationRequest)
+                .filter(ClarificationRequest.clarification_id == clarification_id)
+                .with_for_update().first())
+
+    def list_by_turn(self, turn_id: str) -> list[ClarificationRequest]:
+        return (self.db.query(ClarificationRequest)
+                .filter(ClarificationRequest.source_turn_id == turn_id)
+                .order_by(ClarificationRequest.round).all())
 
     def get_by_plan_id(self, plan_id: str) -> ClarificationRequest | None:
         """根据源 Plan ID 查询澄清请求（只读查询，不加锁）。

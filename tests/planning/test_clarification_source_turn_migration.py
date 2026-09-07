@@ -109,15 +109,9 @@ class ClarificationSourceTurnMigrationTest(unittest.TestCase):
 
             operations.create_unique_constraint.assert_not_called()
 
-    def test_orm_declares_source_turn_unique_constraint(self) -> None:
-        self.assertIn(
-            "uq_clarification_requests_source_turn",
-            {
-                constraint.name
-                for constraint in ClarificationRequest.__table__.constraints
-            },
-        )
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_orm_declares_turn_round_unique_constraint(self) -> None:
+        constraints = {constraint.name: list(constraint.columns.keys())
+                       for constraint in ClarificationRequest.__table__.constraints
+                       if isinstance(constraint, sa.UniqueConstraint)}
+        self.assertNotIn("uq_clarification_requests_source_turn", constraints)
+        self.assertEqual(constraints["uq_clarification_requests_turn_round"], ["source_turn_id", "round"])

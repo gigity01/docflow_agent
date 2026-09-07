@@ -50,6 +50,10 @@ jobs:
           uv run --locked alembic current
       - name: Verify real schema, Redis and Qdrant
         run: uv run --locked python scripts/check_demo_services.py
+      - name: Verify real message failure and replay
+        env:
+          RUN_LIVE_RECOVERY_TESTS: "1"
+        run: uv run --locked python -m unittest discover -s tests/integration -p test_delivery_services.py -v
       - name: Refuse repeat initialization
         run: |
           if uv run --locked python scripts/bootstrap_database.py --seed-demo; then

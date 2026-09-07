@@ -71,7 +71,7 @@ async def send_conversation_message(
 
     Args:
         conversation_id: 路径参数，会话唯一标识。
-        request: 请求体，包含 message 与可选的 source_turn_id。
+        request: 请求体，包含 message 与可选的 clarification_id。
         response: FastAPI 响应对象，用于动态设置 202 状态码。
         use_case: 依赖注入的 SendConversationMessageUseCase 实例。
 
@@ -86,7 +86,7 @@ async def send_conversation_message(
             SendConversationMessageCommand(
                 conversation_id=conversation_id,
                 message=request.message,
-                source_turn_id=request.source_turn_id,
+                clarification_id=request.clarification_id,
             )
         )
     except ContextApplicationError as exc:
@@ -128,8 +128,7 @@ def get_conversation_turn_status(
         HTTPException: 当 Turn 不存在时抛出 404。
     """
     try:
-        return TurnStatusResponse.model_validate(
-            use_case.execute(conversation_id, turn_id)
-        )
+        result = use_case.execute(conversation_id, turn_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return TurnStatusResponse.model_validate(result.model_dump())

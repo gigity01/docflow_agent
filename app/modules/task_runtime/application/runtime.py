@@ -7,6 +7,8 @@ execution_id / operation_id 校验；旧执行停止写入后才能开始补偿�
 
 from __future__ import annotations
 
+from app.shared.time import utc_now
+
 import asyncio
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -143,7 +145,7 @@ class TaskRuntimeService:
                 event_id=event_id,
             )
         if claimed.task is None:
-            return ExecutePlanResult(plan_id=plan_id, outcome=claimed.outcome)
+            return ExecutePlanResult(plan_id=plan_id, outcome=claimed.outcome, defer_until=claimed.defer_until)
 
         task = claimed.task
         definition = self._capabilities.require(task.capability_code)
@@ -298,10 +300,12 @@ class TaskRuntimeService:
                         return recovery_claim
                     uow.commit()
                     return recovery_claim
-                self._record_inbox(uow, event_id)
-                if event_id is not None:
-                    uow.commit()
-                return ClaimNextTaskResult(outcome="already_running")
+                active = uow.tasks.get_by_id_for_update(plan.current_task_id)
+                definition = self._capabilities.require(active.capability_code)
+                return ClaimNextTaskResult(
+                    outcome="already_running",
+                    defer_until=active.started_at + timedelta(seconds=definition.timeout_seconds),
+                )
             if (
                 compensation_execution_id is not None
                 or compensation_operation_id is not None
@@ -342,12 +346,12 @@ class TaskRuntimeService:
             definition = self._capabilities.require(task.capability_code)
             attempt = task.attempt_count + 1
             task.attempt_count = attempt
-            task.max_attempts = definition.max_attempts
+            task.max_attempts = max(task.max_attempts, definition.max_attempts)
             task.status = TaskStatus.RUNNING.value
-            task.started_at = datetime.now()
+            task.started_at = utc_now()
             plan.status = PlanStatus.RUNNING.value
             if plan.started_at is None:
-                plan.started_at = datetime.now()
+                plan.started_at = utc_now()
             operation_id = _new_id("operation")
             execution_id = _new_id("execution")
             agent_run_id = _new_id("agent_run")
@@ -371,7 +375,7 @@ class TaskRuntimeService:
                     blocked=False,
                     agent_run_id=agent_run_id,
                     operation_id=operation_id,
-                    started_at=datetime.now(),
+                    started_at=utc_now(),
                     completed_at=None,
                 )
             )
@@ -381,7 +385,7 @@ class TaskRuntimeService:
                     plan,
                     RuntimeEventType.PLAN_WAKEUP,
                     available_at=(
-                        datetime.now()
+                        utc_now()
                         + timedelta(seconds=definition.timeout_seconds)
                     ),
                 )
@@ -417,7 +421,7 @@ class TaskRuntimeService:
                 inbox_id=_new_id("inbox"),
                 consumer_name="task_runtime",
                 event_id=event_id,
-                processed_at=datetime.now(),
+                processed_at=utc_now(),
             )
         )
 
@@ -452,7 +456,7 @@ class TaskRuntimeService:
         # 未达到租约超时时间则依然视为在运行中
         if (
             started_at is None
-            or datetime.now()
+            or utc_now()
             < started_at + timedelta(seconds=definition.timeout_seconds)
         ):
             return None
@@ -594,7 +598,7 @@ class TaskRuntimeService:
             )
 
             execution.compensation_attempt_count += 1
-            execution.compensation_last_attempt_at = datetime.now()
+            execution.compensation_last_attempt_at = utc_now()
             attempt = execution.compensation_attempt_count
             uow.commit()
             return attempt
@@ -622,7 +626,7 @@ class TaskRuntimeService:
             if execution.compensation_attempt_count != attempt:
                 raise RuntimeError("Task Execution 补偿 attempt 已失效")
 
-            now = datetime.now()
+            now = utc_now()
             execution.compensation_last_error = str(error)
             # 若补偿达到最大次数上限，进入 COMPENSATION_LOCKED
             if attempt >= self._max_compensation_attempts:
@@ -733,7 +737,7 @@ class TaskRuntimeService:
                 snapshot,
             )
 
-            now = datetime.now()
+            now = utc_now()
             execution.status = TaskExecutionStatus.COMPENSATED.value
             execution.completed_at = now
             task.last_error_code = execution.error_code
@@ -831,7 +835,7 @@ class TaskRuntimeService:
         """在短事务中标记任务成功完成，并触发下一任务唤醒或聚合事件。"""
         with self._ports.uow_factory() as uow:
             plan, task, execution = self._lock_execution(uow, snapshot)
-            now = datetime.now()
+            now = utc_now()
             task.status = TaskStatus.SUCCEEDED.value
             task.output_json = output_json
             task.last_error_code = None
@@ -869,7 +873,7 @@ class TaskRuntimeService:
         """处理无副作用能力的失败落盘。"""
         with self._ports.uow_factory() as uow:
             plan, task, execution = self._lock_execution(uow, snapshot)
-            now = datetime.now()
+            now = utc_now()
             execution.status = TaskExecutionStatus.FAILED.value
             execution.error_code = error.error_code
             execution.error_message = str(error)
@@ -956,7 +960,7 @@ class TaskRuntimeService:
             ),
             status=OutboxEventStatus.PENDING.value,
             attempts=0,
-            available_at=available_at or datetime.now(),
+            available_at=available_at or utc_now(),
             published_at=None,
         )
 

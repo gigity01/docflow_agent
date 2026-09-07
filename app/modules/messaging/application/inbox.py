@@ -3,6 +3,8 @@
 用于在消费消息的业务事务内部校验并登记事件消费记录，防止同一消费者对同一事件进行重复消费处理。
 """
 
+
+from app.shared.time import utc_now
 from datetime import datetime
 from uuid import uuid4
 
@@ -38,7 +40,7 @@ def record_inbox_once(
             inbox_id=f"inbox_{uuid4().hex}",
             consumer_name=consumer_name,
             event_id=event_id,
-            processed_at=datetime.now(),
+            processed_at=utc_now(),
         )
     )
     return True

@@ -7,10 +7,12 @@
 4. 递归解析 Markdown 标题树，提取 1-based 行范围及完整标题面包屑路径（section_path）。
 """
 
-import re
 from pathlib import Path
 from typing import Any
 
+from app.modules.document.infrastructure.markdown_structure import (
+    CodeFence, HEADING_PATTERN, extract_sections,
+)
 from app.modules.document.infrastructure.parsing.base import (
     BaseProcessor,
     ProcessResult,
@@ -22,10 +24,7 @@ class MdProcessor(BaseProcessor):
 
     source_type = "md"
 
-    # 匹配 1 到 6 级 ATX 标题正则
-    HEADING_PATTERN = re.compile(
-        r"^[ \t]{0,3}(#{1,6})[ \t]+(.+?)\s*$"
-    )
+    HEADING_PATTERN = HEADING_PATTERN
 
     def process(
         self,
@@ -84,8 +83,12 @@ class MdProcessor(BaseProcessor):
         )
 
         cleaned_lines: list[str] = []
+        fence = CodeFence()
 
-        for raw_line in text.split("\n"):
+        for raw_line in text.splitlines():
+            if fence.contains(raw_line):
+                cleaned_lines.append(raw_line)
+                continue
             line = raw_line.rstrip()
 
             # 折叠连续空行
@@ -107,7 +110,7 @@ class MdProcessor(BaseProcessor):
         while cleaned_lines and cleaned_lines[0] == "":
             cleaned_lines.pop(0)
 
-        while cleaned_lines and cleaned_lines[-1] == "":
+        while cleaned_lines and cleaned_lines[-1] == "" and not fence.marker:
             cleaned_lines.pop()
 
         cleaned_text = "\n".join(cleaned_lines)
@@ -118,58 +121,5 @@ class MdProcessor(BaseProcessor):
         return cleaned_text
 
     def _extract_sections(self, text: str) -> list[dict[str, Any]]:
-        """按 ATX 标题解析章节树，并记录每个 section 的 1-based 起止行号与标题路径。"""
-        lines = text.splitlines()
-
-        if not lines:
-            return []
-
-        sections: list[dict[str, Any]] = []
-        heading_stack: list[tuple[int, str]] = []
-        current_section: dict[str, Any] | None = None
-
-        for line_number, line in enumerate(lines, start=1):
-            match = self.HEADING_PATTERN.match(line)
-
-            if match:
-                if current_section is not None:
-                    current_section["end_line"] = line_number - 1
-                    sections.append(current_section)
-
-                level = len(match.group(1))
-                title = match.group(2).strip()
-
-                # 维护祖先栈
-                while heading_stack and heading_stack[-1][0] >= level:
-                    heading_stack.pop()
-
-                heading_stack.append((level, title))
-
-                current_section = {
-                    "level": level,
-                    "title": title,
-                    "section_path": [
-                        item_title for _, item_title in heading_stack
-                    ],
-                    "heading_line": line_number,
-                    "start_line": line_number,
-                    "end_line": line_number,
-                }
-                continue
-
-            # 处理文档最开头的无标题前言
-            if current_section is None and line.strip():
-                current_section = {
-                    "level": None,
-                    "title": None,
-                    "section_path": [],
-                    "heading_line": None,
-                    "start_line": line_number,
-                    "end_line": line_number,
-                }
-
-        if current_section is not None:
-            current_section["end_line"] = len(lines)
-            sections.append(current_section)
-
-        return sections
+        """提取代码围栏之外的章节标题。"""
+        return extract_sections(text.splitlines())

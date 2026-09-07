@@ -39,6 +39,7 @@ Python · FastAPI · OpenAI Agents SDK · LangGraph · SQLAlchemy / Alembic · M
 
 - 无模型密钥：上传 Markdown → 清洗 → 切块 → 查询结果。
 - 配置模型后：自然语言发起任务 → 异步执行 → 查看文档索引结果。
+- 异常处理：查询失败原因，修复后通过恢复接口继续；详见启动指南的“失败与恢复”。
 - [Backend tests](https://github.com/gigity01/docflow_agent/actions/workflows/tests.yml)：自动测试与真实基础服务检查；验证范围见启动指南。
 
 ## 代码导航

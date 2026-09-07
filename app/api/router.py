@@ -10,6 +10,7 @@
 """
 
 from fastapi import APIRouter
+from app.modules.messaging.presentation.router import router as runtime_recovery_router
 
 from app.modules.context.presentation.router import (
     legacy_router as context_legacy_router,
@@ -27,6 +28,7 @@ from app.modules.document.presentation.router import (
 
 # 创建全局 API Router 并指定 /api 统一前缀
 api_router = APIRouter(prefix="/api")
+api_router.include_router(runtime_recovery_router)
 
 # 1. 注册会话消息编排与 Turn 状态查询路由
 api_router.include_router(conversation_router)

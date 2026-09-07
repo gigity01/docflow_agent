@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
+from app.shared.time import utc_now
 
 from app.modules.messaging.application.ports import MessagePublisherPort
 from app.modules.messaging.domain.enums import OutboxEventStatus
@@ -27,6 +28,7 @@ class _EventSnapshot:
     event_id: str
     event_type: str
     payload: dict
+    origin_event_id: str | None = None
 
 
 class OutboxPublisher:
@@ -37,14 +39,14 @@ class OutboxPublisher:
         *,
         uow_factory,
         publisher: MessagePublisherPort,
-        max_attempts: int = 10,
+        max_attempts: int = 3,
     ) -> None:
         """初始化 Outbox 发布器。
 
         Args:
             uow_factory: 工作单元工厂函数，每次调用产生独立短事务的 UoW。
             publisher: 消息发布端端口实例（如 RedisStreamPublisher）。
-            max_attempts: 最大投递重试次数，达到后标记为死信。默认值为 10。
+            max_attempts: 最大投递重试次数，达到后标记为死信。默认值为 3（包含首次）。
         """
         self._uow_factory = uow_factory
         self._publisher = publisher
@@ -69,7 +71,7 @@ class OutboxPublisher:
         for event in snapshots:
             try:
                 await self._publisher.publish(
-                    event_id=event.event_id,
+                    event_id=event.origin_event_id or event.event_id,
                     event_type=event.event_type,
                     payload=event.payload,
                 )
@@ -96,7 +98,7 @@ class OutboxPublisher:
         with self._uow_factory() as uow:
             events = uow.outbox.list_available_for_update(
                 status=OutboxEventStatus.PENDING.value,
-                now=datetime.now(),
+                now=utc_now(),
                 limit=limit,
             )
             return [
@@ -104,6 +106,7 @@ class OutboxPublisher:
                     event_id=event.event_id,
                     event_type=event.event_type,
                     payload=dict(event.payload_json),
+                    origin_event_id=getattr(event, "origin_event_id", None),
                 )
                 for event in events
             ]
@@ -119,7 +122,7 @@ class OutboxPublisher:
             if event is None or event.status != OutboxEventStatus.PENDING.value:
                 return
             event.status = OutboxEventStatus.PUBLISHED.value
-            event.published_at = datetime.now()
+            event.published_at = utc_now()
             uow.commit()
 
     def _mark_failed(self, event_id: str) -> None:
@@ -135,4 +138,6 @@ class OutboxPublisher:
             event.attempts += 1
             if event.attempts >= self._max_attempts:
                 event.status = OutboxEventStatus.DEAD_LETTER.value
+            else:
+                event.available_at = utc_now() + timedelta(seconds=30 * event.attempts)
             uow.commit()

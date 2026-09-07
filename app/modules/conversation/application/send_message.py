@@ -27,7 +27,7 @@ class SendConversationMessageUseCase:
     """处理用户会话消息的核心编排用例。
 
     编排主流程：
-    1. 澄清回复分支：若请求携带 `source_turn_id`，说明用户正在回复先前的澄清提问。
+    1. 澄清回复分支：若请求携带 `clarification_id`，说明用户正在回复先前的澄清提问。
        此时调用 AnswerClarificationUseCase 将回答写入源 Turn，并将澄清标记为 answered，发布 Replan 异步事件。
     2. 普通消息分支：
        - 上下文选择（Context Selection）：调用 ContextService.send_message，通过 Context Agent 判断消息关联的历史链（Read Set）并持久化 Turn。
@@ -71,18 +71,18 @@ class SendConversationMessageUseCase:
             PlanningApplicationError: Planner 规划应用层异常。
         """
         # 分支 1：处理针对已有澄清请求的回复
-        if command.source_turn_id is not None:
-            plan_id = await asyncio.to_thread(
+        if command.clarification_id is not None:
+            answered = await asyncio.to_thread(
                 self._answer_clarification.execute,
                 conversation_id=command.conversation_id,
-                source_turn_id=command.source_turn_id,
+                clarification_id=command.clarification_id,
                 answer=command.message,
             )
 
             return SendConversationMessageResult(
                 conversation_id=command.conversation_id,
-                turn_id=command.source_turn_id,
-                plan_id=plan_id,
+                turn_id=answered.turn_id,
+                plan_id=answered.plan_id,
                 status="retry_pending",
             )
 
@@ -159,6 +159,8 @@ class SendConversationMessageUseCase:
                 plan_id=planning.plan_id,
                 status="needs_clarification",
                 assistant_message=question,
+                clarification_id=planning.clarification_id,
+                clarification_round=planning.clarification_round,
                 context_selection=selection_metadata,
             )
 

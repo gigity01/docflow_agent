@@ -90,10 +90,37 @@ API 与 Worker 必须共享同一个工作目录、数据库、Redis、存储和
 如遇澄清，在 Swagger 中向同一 `conversation_id` 的 `messages` 接口发送：
 
 ```json
-{"message": "补充问题所需的信息", "source_turn_id": "上一次响应的 turn_id"}
+{"message": "补充问题所需的信息", "clarification_id": "当前待回答的 clarification_id"}
 ```
 
 按新响应中的 `turn_id` 继续查询，不能把澄清状态当成执行成功。
+
+每个 Turn 最多三轮澄清，每轮保存问题与答案。回答必须使用当前 `clarification_id`；重复回答旧问题返回 409。
+三轮后信息仍不足会终止，并说明还缺什么。澄清次数与系统自动重规划预算分开计算。
+
+## 失败与恢复
+
+先调用 `GET /api/conversations/{conversation_id}/turns/{turn_id}`，查看任务状态、尝试次数、失败原因、已成功步骤的结果、澄清历史以及 `next_action`。
+
+| 情况 | 自动处理 | 人工操作 |
+| --- | --- | --- |
+| 消息格式或事件类型错误 | 持久化隔离后确认原消息，后续消息继续 | 修正输入并提交新请求 |
+| Redis 发布或事件处理暂时失败 | 最多 3 次尝试（含首次），失败间隔 30、60 秒；耗尽后保留失败记录 | 修好服务后恢复对应失败记录 |
+| Worker 中断或执行租约未到期 | 保留消息等待到期，等待不占失败次数；规划另有持久化超时唤醒 | 可调用计划恢复接口安排检查 |
+| 单个业务任务失败 | 沿用每轮最多 3 次执行和先补偿再重试；系统自动重规划最多 2 次 | 检查原因后恢复计划 |
+| 补偿连续失败 5 次 | 锁定补偿并保留 Operation，不运行新任务 | 修复原因后恢复计划，先重新尝试补偿 |
+
+恢复接口均可在 Swagger 调用：
+
+- `GET /api/admin/runtime/failures`：查询消息失败，可按 `plan_id` 过滤。`limit` / `offset` 分别作用于发布、消费两个类别。
+- `POST /api/admin/runtime/failures/{failure_id}/retry`：重放有效消息。保留原业务事件 ID，成功消费不会重复执行；坏格式原文不能直接重放。
+- `POST /api/admin/runtime/plans/{plan_id}/recover`：按持久化状态恢复。完成计划只返回已有状态；执行中的计划等租约；补偿锁进入补偿；已失败计划只给未完成步骤开启新一轮有限重试。澄清耗尽和不支持的请求须补全信息后重新提交。
+
+例如索引服务失败后，先查看失败原因并修好服务，再调用 `recover`，随后继续轮询同一 Turn。不要直接改任务状态或清空 Operation。
+消息层只负责可靠投递；业务执行次数由 Task Runtime 管理，两层不会各自重复启动同一个已领取任务。
+
+本次更新调整了澄清接口和数据库结构，旧 `source_turn_id` 回答字段不再接受。新的测试环境优先使用空库初始化；上一版本数据库可执行 `alembic upgrade head`。
+恢复相关迁移不支持降级为单轮澄清结构；数据库不会被启动脚本自动清空。所有编排时间和 MySQL 会话统一使用 UTC。
 
 ## 测试与验证范围
 
@@ -102,6 +129,7 @@ uv run --locked python scripts/run_tests.py
 ```
 
 GitHub Actions 自动执行 Python 3.11 / 3.12 测试，以及真实 MySQL 空库初始化、Redis / Qdrant 读写和 HTTP 上传清洗切块演示。
+真实 MySQL / Redis 作业还会注入坏消息和临时失败，验证隔离、三次尝试耗尽、人工重放及重复消息不重复执行。
 测试入口会覆盖当前进程的数据库、DashScope 和 DeepSeek 配置，不要求本地 `.env` 或真实模型密钥。
 现有 `tests/integration/test_runtime_worker_end_to_end.py` 使用模拟模型、内存 Redis 和 SQLite 验证任务依赖、补偿及重规划。
 CI 不持有模型密钥，不验证真实 Agent 决策、Embedding 质量，也不宣称证明跨进程故障恢复。

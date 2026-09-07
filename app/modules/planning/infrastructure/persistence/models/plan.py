@@ -75,6 +75,7 @@ class Plan(Base):
         default=PlanStatus.PLANNING.value,
     )
     revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    system_retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     failure_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

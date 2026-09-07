@@ -1,6 +1,7 @@
 """把回答写回源 Turn，并可靠请求同一 Turn 的新 Plan revision。"""
 
-from datetime import datetime
+from dataclasses import dataclass
+from app.shared.time import utc_now
 from uuid import uuid4
 
 from app.modules.clarification.application.errors import (
@@ -13,6 +14,12 @@ from app.modules.messaging.domain.enums import (
     RuntimeEventType,
 )
 from app.modules.planning.domain.enums import PlanStatus
+
+
+@dataclass(frozen=True)
+class ClarificationAnswer:
+    plan_id: str
+    turn_id: str
 
 
 class AnswerClarificationUseCase:
@@ -46,18 +53,18 @@ class AnswerClarificationUseCase:
         self,
         *,
         conversation_id: str,
-        source_turn_id: str,
+        clarification_id: str,
         answer: str,
-    ) -> str:
+    ) -> ClarificationAnswer:
         """执行处理澄清回答，更新状态并发布 Replan Outbox 事件。
 
         Args:
             conversation_id: 会话唯一标识。
-            source_turn_id: 发起澄清提问的源 Turn 标识。
+            clarification_id: 当前待回答的澄清请求 ID。
             answer: 用户对澄清问题的回答内容。
 
         Returns:
-            关联的 Plan ID。
+            关联的 Plan 和源 Turn ID。
 
         Raises:
             ClarificationApplicationError:
@@ -75,15 +82,14 @@ class AnswerClarificationUseCase:
 
         with self._uow_factory() as uow:
             # 2. 以行级排他锁锁定源澄清记录
-            request = uow.clarifications.get_by_source_turn_id_for_update(
-                source_turn_id
-            )
+            request = uow.clarifications.get_by_id_for_update(clarification_id)
             if request is None:
                 raise ClarificationApplicationError(
                     404,
                     "Clarification 不存在",
                 )
 
+            source_turn_id = request.source_turn_id
             # 3. 锁定关联的源 Turn 和源 Plan
             source_turn = uow.conversation_turns.get_by_id_for_update(
                 source_turn_id
@@ -118,19 +124,17 @@ class AnswerClarificationUseCase:
                     "Clarification 当前状态不允许回答",
                 )
 
-            # 6. 防止重复回答冲突
-            if source_turn.clarification_input is not None:
-                raise ClarificationApplicationError(
-                    409,
-                    "Clarification 已澄清",
-                )
-
             # 7. 推进 Clarification 状态为 ANSWERED
             request.status = ClarificationStatus.ANSWERED.value
             request.answer_turn_id = source_turn_id
 
             # 8. 将回答写回源 Turn 并推进 Turn 为 PROCESSING
-            source_turn.clarification_input = normalized_answer
+            request.answer_text = normalized_answer
+            answers = uow.clarifications.list_by_turn(source_turn_id)
+            source_turn.clarification_input = "\n\n".join(
+                f"第 {item.round} 轮问题：{item.question or item.reason}\n回答：{item.answer_text}"
+                for item in answers if item.answer_text
+            )
             uow.conversation_turns.set_status(
                 source_turn,
                 ContextTurnStatus.PROCESSING.value,
@@ -156,9 +160,9 @@ class AnswerClarificationUseCase:
                     },
                     status=OutboxEventStatus.PENDING.value,
                     attempts=0,
-                    available_at=datetime.now(),
+                    available_at=utc_now(),
                     published_at=None,
                 )
             )
             uow.commit()
-            return plan.plan_id
+            return ClarificationAnswer(plan.plan_id, source_turn_id)

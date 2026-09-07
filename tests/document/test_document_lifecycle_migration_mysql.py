@@ -162,7 +162,7 @@ class DocumentLifecycleMigrationMySQLTest(unittest.TestCase):
             ).scalar_one()
 
     def test_upgrade_unique_null_semantics_and_downgrade(self) -> None:
-        upgrade_result = self._run_alembic("upgrade", "head")
+        upgrade_result = self._run_alembic("upgrade", "e7b3c2d4a9f1")
         self.assertEqual(upgrade_result.returncode, 0, upgrade_result.stderr)
         self.assertTrue(MIGRATION_COLUMNS.issubset(self._column_names()))
 
