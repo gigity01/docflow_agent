@@ -33,6 +33,14 @@ Python · FastAPI · OpenAI Agents SDK · LangGraph · SQLAlchemy / Alembic · M
 
 模型接入包含 DeepSeek，向量索引能力使用 Qwen Embedding。
 
+## 启动与演示
+
+见 [本地启动指南](docs/quickstart.md)：包含空库初始化、基础服务、API / Worker 启动和可执行演示。
+
+- 无模型密钥：上传 Markdown → 清洗 → 切块 → 查询结果。
+- 配置模型后：自然语言发起任务 → 异步执行 → 查看文档索引结果。
+- [Backend tests](https://github.com/gigity01/docflow_agent/actions/workflows/tests.yml)：自动测试与真实基础服务检查；验证范围见启动指南。
+
 ## 代码导航
 
 - [Agent 实现](app/agents)：取证、缺口处理、规划与受限执行器。
@@ -43,6 +51,6 @@ Python · FastAPI · OpenAI Agents SDK · LangGraph · SQLAlchemy / Alembic · M
 
 ## 当前范围
 
-当前版本以**后端 API 和 Agent 执行链路**为主，尚未提供前端页面或交互演示。
+当前版本以**后端 API 和 Agent 执行链路**为主，提供命令行演示，尚未提供前端页面。
 
 目前可执行任务为文档处理、切块和向量索引，不是通用自主执行平台，也尚未提供完整的检索问答产品界面。仓库包含使用模拟组件的集成测试；真实模型及外部服务的运行效果需在配置对应环境后验证。

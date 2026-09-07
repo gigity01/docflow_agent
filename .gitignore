@@ -21,6 +21,8 @@ __pycache__/
 *.so
 .Python
 .venv/
+.venv-check/
+/work/uv-cache/
 venv/
 env/
 ENV/

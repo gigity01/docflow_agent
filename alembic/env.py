@@ -56,6 +56,13 @@ def run_migrations_online() -> None:
 
     使用 NullPool 避免连接池驻留，迁移完成后立即释放数据库连接。
     """
+    connection = config.attributes.get("connection")
+    if connection is not None:
+        context.configure(connection=connection, target_metadata=target_metadata)
+        with context.begin_transaction():
+            context.run_migrations()
+        return
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

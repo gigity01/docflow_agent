@@ -1,0 +1,42 @@
+# 仅供本机开发：所有服务端口绑定回环地址，凭据为公开演示值。
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: docflow-local-root
+      MYSQL_DATABASE: docflow_demo
+      MYSQL_USER: docflow
+      MYSQL_PASSWORD: docflow-local
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # 初始化期间的临时服务只接受 socket；TCP 查询成功才算可供 API 使用。
+      test: ["CMD-SHELL", "mysql --protocol=TCP -h127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD -D$$MYSQL_DATABASE -e 'SELECT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  redis:
+    image: redis:7.4
+    ports:
+      - "127.0.0.1:6380:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  qdrant:
+    image: qdrant/qdrant:v1.18.0
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+volumes:
+  mysql-data:
+  redis-data:
+  qdrant-data:
