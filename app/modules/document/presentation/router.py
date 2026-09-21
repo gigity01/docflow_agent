@@ -21,6 +21,9 @@ from app.modules.document.application.use_cases.get_chunk_statistics import (
 from app.modules.document.application.use_cases.get_document import (
     GetDocumentUseCase,
 )
+from app.modules.document.application.use_cases.get_document_overview import (
+    GetDocumentOverviewUseCase,
+)
 from app.modules.document.application.use_cases.get_knowledge_base_statistics import (
     GetKnowledgeBaseStatisticsUseCase,
 )
@@ -56,6 +59,7 @@ from app.modules.document.presentation.dependencies import (
     get_build_chunks_use_case,
     get_document_chunk_statistics_use_case,
     get_document_operation_context,
+    get_document_overview_use_case,
     get_document_pipeline_state_use_case,
     get_document_use_case,
     get_index_vectors_use_case,
@@ -76,6 +80,7 @@ from app.modules.document.presentation.schemas import (
     DocumentArtifactSearchResponse,
     DocumentArtifactsResponse,
     DocumentChunkStatisticsResponse,
+    DocumentOverviewResponse,
     DocumentPipelineStateResponse,
     DocumentProcessResponse,
     DocumentResponse,
@@ -198,6 +203,21 @@ def get_document_chunk_statistics(
 ):
     """读取文档父块、子块和向量状态统计指标。"""
     return use_case.execute(document_id)
+
+
+@router.get(
+    "/{document_id}/overview",
+    response_model=DocumentOverviewResponse,
+)
+def get_document_overview(
+    document_id: PositiveId,
+    use_case: GetDocumentOverviewUseCase = Depends(
+        get_document_overview_use_case
+    ),
+):
+    """读取文档全景概览（聚合元数据、流水线状态快照与切块统计）。"""
+    return use_case.execute(document_id)
+
 
 
 @router.post(

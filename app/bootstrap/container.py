@@ -43,6 +43,9 @@ from app.modules.document.application.use_cases.index_vectors import (
 from app.modules.document.application.use_cases.get_document import (
     GetDocumentUseCase,
 )
+from app.modules.document.application.use_cases.get_document_overview import (
+    GetDocumentOverviewUseCase,
+)
 from app.modules.document.application.use_cases.get_chunk_statistics import (
     GetDocumentChunkStatisticsUseCase,
 )
@@ -184,6 +187,7 @@ class AppContainer:
     list_child_chunks: ListChildChunksUseCase
     get_document_chunk_statistics: GetDocumentChunkStatisticsUseCase
     get_knowledge_base_statistics: GetKnowledgeBaseStatisticsUseCase
+    get_document_overview: GetDocumentOverviewUseCase
     message_delivery: MessageDeliveryService | None = None
     recover_plan: RecoverPlanUseCase | None = None
 

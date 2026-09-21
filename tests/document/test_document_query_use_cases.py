@@ -24,6 +24,9 @@ from app.modules.document.application.errors import DocumentApplicationError
 from app.modules.document.application.use_cases.get_document import (
     GetDocumentUseCase,
 )
+from app.modules.document.application.use_cases.get_document_overview import (
+    GetDocumentOverviewUseCase,
+)
 from app.modules.document.application.use_cases.get_chunk_statistics import (
     GetDocumentChunkStatisticsUseCase,
 )
@@ -497,6 +500,109 @@ class DocumentQueryUseCasesTest(unittest.TestCase):
         self.assertEqual(result.parent_count, 8)
         self.assertEqual(result.child_count, 12)
         self.assertEqual(result.vector_status_counts["indexed"], 9)
+
+    def test_document_overview_raises_404_when_document_not_found(self) -> None:
+        documents = _Documents([])
+        use_case = GetDocumentOverviewUseCase(uow_factory=lambda: _Uow(documents))
+        with self.assertRaises(DocumentApplicationError) as ctx:
+            use_case.execute(999999)
+        self.assertEqual(ctx.exception.status_code, 404)
+        self.assertEqual(ctx.exception.detail, "文档不存在")
+
+    def test_document_overview_empty_initial_state(self) -> None:
+        doc = _document(7)
+        doc.status = "uploaded"
+
+        class _EmptyPB:
+            def count_active_by_doc_id(self, doc_id):
+                return 0
+
+            def count_by_status_for_document(self, doc_id):
+                return {}
+
+        class _EmptyCC:
+            def count_by_vector_status_for_document(self, doc_id):
+                return {}
+
+            def count_by_status_for_document(self, doc_id):
+                return {}
+
+            def count_all_by_vector_status_for_document(self, doc_id):
+                return {}
+
+            def count_vector_id_presence_for_document(self, doc_id):
+                return 0, 0
+
+            def count_by_chunk_type_for_document(self, doc_id):
+                return {}
+
+        uow = _Uow(_Documents([doc]))
+        uow.parent_blocks = _EmptyPB()
+        uow.child_chunks = _EmptyCC()
+        use_case = GetDocumentOverviewUseCase(uow_factory=lambda: uow)
+        result = use_case.execute(7)
+
+        self.assertEqual(result.document.status, "uploaded")
+        self.assertEqual(result.pipeline_state.document_status, "uploaded")
+        self.assertEqual(result.pipeline_state.parent_count, 0)
+        self.assertEqual(result.pipeline_state.child_count, 0)
+        self.assertEqual(result.pipeline_state.vector_status_counts, {})
+        self.assertEqual(result.chunk_statistics.parent_count, 0)
+        self.assertEqual(result.chunk_statistics.child_count, 0)
+        self.assertEqual(result.chunk_statistics.parent_status_counts, {})
+        self.assertEqual(result.chunk_statistics.child_status_counts, {})
+        self.assertEqual(result.chunk_statistics.vector_status_counts, {})
+        self.assertEqual(result.chunk_statistics.chunk_type_counts, {})
+        self.assertEqual(result.chunk_statistics.chunks_with_vector_id, 0)
+        self.assertEqual(result.chunk_statistics.chunks_without_vector_id, 0)
+
+    def test_document_overview_in_progress_statuses_converge(self) -> None:
+        for status in ("processing", "chunking", "indexing"):
+            with self.subTest(status=status):
+                doc = _document(7)
+                doc.status = status
+                uow = _Uow(_Documents([doc]))
+                use_case = GetDocumentOverviewUseCase(uow_factory=lambda: uow)
+                result = use_case.execute(7)
+
+                self.assertEqual(result.document.status, "in_progress")
+                self.assertEqual(result.pipeline_state.document_status, "in_progress")
+                self.assertEqual(result.document.lifecycle_status, "active")
+                self.assertEqual(result.document.storage_status, "active")
+                self.assertEqual(result.pipeline_state.lifecycle_status, "active")
+                self.assertEqual(result.pipeline_state.storage_status, "active")
+
+    def test_document_overview_stable_statuses_preserved(self) -> None:
+        for status in ("uploaded", "processed", "chunked", "indexed", "failed"):
+            with self.subTest(status=status):
+                doc = _document(7)
+                doc.status = status
+                uow = _Uow(_Documents([doc]))
+                use_case = GetDocumentOverviewUseCase(uow_factory=lambda: uow)
+                result = use_case.execute(7)
+
+                self.assertEqual(result.document.status, status)
+                self.assertEqual(result.pipeline_state.document_status, status)
+
+    def test_document_overview_aggregates_all_components_consistently(self) -> None:
+        doc = _document(7)
+        doc.status = "indexed"
+        uow = _Uow(_Documents([doc]))
+        use_case = GetDocumentOverviewUseCase(uow_factory=lambda: uow)
+        result = use_case.execute(7)
+
+        self.assertEqual(result.document.id, 7)
+        self.assertEqual(result.document.doc_code, "DOC_7")
+        self.assertEqual(result.pipeline_state.parent_count, 2)
+        self.assertEqual(result.pipeline_state.child_count, 4)
+        self.assertEqual(
+            result.pipeline_state.vector_status_counts,
+            {"pending": 1, "indexed": 3},
+        )
+        self.assertEqual(result.chunk_statistics.parent_count, 3)
+        self.assertEqual(result.chunk_statistics.child_count, 5)
+        self.assertEqual(result.chunk_statistics.chunks_with_vector_id, 3)
+        self.assertEqual(result.chunk_statistics.chunks_without_vector_id, 2)
 
 
 if __name__ == "__main__":

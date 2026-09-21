@@ -411,6 +411,17 @@ class KnowledgeBaseStatisticsResult(BaseModel):
     vector_status_counts: dict[str, int]
 
 
+class DocumentOverviewResult(BaseModel):
+    """单篇文档全景概览结果视图（聚合文档主表、流水线状态与切块统计）。"""
+
+    document: DocumentResult
+    pipeline_state: DocumentPipelineStateResult
+    chunk_statistics: DocumentChunkStatisticsResult
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+
 class DocumentArtifactCreate(BaseModel):
     """创建并持久化文档派生产物所需的输入模型。"""
 
