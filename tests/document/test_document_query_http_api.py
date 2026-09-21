@@ -23,8 +23,11 @@ from unittest import mock
 import httpx
 from fastapi import FastAPI
 
+from app.bootstrap.app_factory import _document_application_error_handler
+from app.modules.document.application.errors import DocumentApplicationError
 from app.modules.document.presentation.dependencies import (
     get_document_chunk_statistics_use_case,
+    get_document_overview_use_case,
     get_document_pipeline_state_use_case,
     get_document_use_case,
     get_knowledge_base_statistics_use_case,
@@ -85,6 +88,10 @@ def _service(result: dict) -> mock.Mock:
 class DocumentQueryHttpApiTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.app = FastAPI()
+        self.app.add_exception_handler(
+            DocumentApplicationError,
+            _document_application_error_handler,
+        )
         for query_router in (
             router,
             artifact_router,
@@ -95,6 +102,37 @@ class DocumentQueryHttpApiTest(unittest.IsolatedAsyncioTestCase):
             self.app.include_router(query_router, prefix="/api")
 
         self.services = {
+            get_document_overview_use_case: _service(
+                {
+                    "document": _document(),
+                    "pipeline_state": {
+                        "document_id": 7,
+                        "doc_code": "DOC_7",
+                        "source_type": "md",
+                        "source_uri": "storage/raw/local/7.md",
+                        "cleaned_uri": "storage/cleaned/7.md",
+                        "document_status": "indexed",
+                        "lifecycle_status": "active",
+                        "storage_status": "active",
+                        "parent_count": 1,
+                        "child_count": 2,
+                        "vector_status_counts": {"indexed": 2},
+                        "indexed_at": NOW,
+                    },
+                    "chunk_statistics": {
+                        "document_id": 7,
+                        "doc_code": "DOC_7",
+                        "parent_count": 1,
+                        "child_count": 2,
+                        "parent_status_counts": {"active": 1},
+                        "child_status_counts": {"active": 2},
+                        "vector_status_counts": {"indexed": 2},
+                        "chunk_type_counts": {"text": 2},
+                        "chunks_with_vector_id": 2,
+                        "chunks_without_vector_id": 0,
+                    },
+                }
+            ),
             get_document_use_case: _service(_document()),
             get_search_documents_use_case: _service(
                 {
@@ -233,6 +271,12 @@ class DocumentQueryHttpApiTest(unittest.IsolatedAsyncioTestCase):
                 None,
                 200,
             ),
+            (
+                "GET",
+                "/api/admin/documents/7/overview",
+                None,
+                200,
+            ),
         )
         for method, path, payload, expected_status in requests:
             with self.subTest(path=path):
@@ -244,6 +288,9 @@ class DocumentQueryHttpApiTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(response.status_code, expected_status)
 
         self.services[get_document_use_case].execute.assert_called_once_with(7)
+        self.services[
+            get_document_overview_use_case
+        ].execute.assert_called_once_with(7)
         search_query = self.services[
             get_search_documents_use_case
         ].execute.call_args.args[0]
@@ -260,6 +307,26 @@ class DocumentQueryHttpApiTest(unittest.IsolatedAsyncioTestCase):
         self.services[
             get_search_documents_use_case
         ].execute.assert_not_called()
+
+    async def test_overview_rejects_invalid_path_parameters(self) -> None:
+        for invalid_path in (
+            "/api/admin/documents/-1/overview",
+            "/api/admin/documents/0/overview",
+            "/api/admin/documents/abc/overview",
+        ):
+            with self.subTest(path=invalid_path):
+                response = await self.client.get(invalid_path)
+                self.assertEqual(response.status_code, 422)
+
+    async def test_overview_returns_404_when_document_not_found(self) -> None:
+        self.services[
+            get_document_overview_use_case
+        ].execute.side_effect = DocumentApplicationError(404, "文档不存在")
+
+        response = await self.client.get("/api/admin/documents/999/overview")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "文档不存在"})
+
 
 
 if __name__ == "__main__":

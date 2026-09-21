@@ -22,6 +22,9 @@ from app.modules.document.application.use_cases.get_chunk_statistics import (
 from app.modules.document.application.use_cases.get_document import (
     GetDocumentUseCase,
 )
+from app.modules.document.application.use_cases.get_document_overview import (
+    GetDocumentOverviewUseCase,
+)
 from app.modules.document.application.use_cases.get_knowledge_base_statistics import (
     GetKnowledgeBaseStatisticsUseCase,
 )
@@ -204,3 +207,11 @@ def get_knowledge_base_statistics_use_case(
 ) -> GetKnowledgeBaseStatisticsUseCase:
     """依赖注入获取知识库整体统计查询用例。"""
     return container.get_knowledge_base_statistics
+
+
+def get_document_overview_use_case(
+    container: AppContainer = Depends(get_container),
+) -> GetDocumentOverviewUseCase:
+    """依赖注入获取文档全景概览查询用例。"""
+    return container.get_document_overview
+

@@ -13,6 +13,7 @@ from app.modules.document.application.dto import (
     ChildChunkSearchQuery,
     DocumentArtifactSearchQuery,
     DocumentChunkStatisticsResult,
+    DocumentOverviewResult,
     DocumentPipelineStateResult,
     DocumentResult,
     DocumentSearchQuery,
@@ -104,3 +105,8 @@ class DocumentChunkStatisticsResponse(DocumentChunkStatisticsResult):
 
 class KnowledgeBaseStatisticsResponse(KnowledgeBaseStatisticsResult):
     """知识库整体文档与切块宏观统计响应 Schema。"""
+
+
+class DocumentOverviewResponse(DocumentOverviewResult):
+    """单篇文档全景概览响应 Schema。"""
+

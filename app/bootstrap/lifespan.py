@@ -110,6 +110,9 @@ from app.modules.document.application.use_cases.index_vectors import (
 from app.modules.document.application.use_cases.get_document import (
     GetDocumentUseCase,
 )
+from app.modules.document.application.use_cases.get_document_overview import (
+    GetDocumentOverviewUseCase,
+)
 from app.modules.document.application.use_cases.get_chunk_statistics import (
     GetDocumentChunkStatisticsUseCase,
 )
@@ -469,6 +472,11 @@ async def build_container() -> AppContainer:
                 uow_factory=SQLAlchemyUnitOfWork
             )
         )
+        get_document_overview = (
+            GetDocumentOverviewUseCase(
+                uow_factory=SQLAlchemyUnitOfWork
+            )
+        )
         index_vectors = IndexVectorsUseCase(
             ports=document_ports,
             settings=DocumentIndexingSettings(
@@ -721,6 +729,7 @@ async def build_container() -> AppContainer:
             list_child_chunks=list_child_chunks,
             get_document_chunk_statistics=get_document_chunk_statistics,
             get_knowledge_base_statistics=get_knowledge_base_statistics,
+            get_document_overview=get_document_overview,
             process_document=process_document,
             build_chunks=build_chunks,
             index_vectors=index_vectors,
